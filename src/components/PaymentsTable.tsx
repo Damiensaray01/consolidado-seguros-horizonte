@@ -42,17 +42,13 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     fechaPago: new Date().toISOString().split('T')[0],
   });
 
-  // Lectura exacta y directa de la columna NUMERO del Google Sheets / Firebase
+  // Función robusta para extraer el número de teléfono/NUMERO
   const formatTelefono = (item: any) => {
     if (!item) return '-';
-    
-    const telRaw = typeof item === 'object'
-      ? (item.NUMERO || item.numero || item.Telefono || item.telefono || item.celular)
-      : item;
-
-    if (telRaw === undefined || telRaw === null || telRaw === '') return '-';
-    const str = String(telRaw).trim();
-    return str !== '' && str !== 'undefined' && str !== 'null' ? str : '-';
+    const val = item.NUMERO || item.numero || item.telefono || item.celular || item.phone || '';
+    const str = String(val).trim();
+    if (!str || str === 'undefined' || str === 'null') return '-';
+    return str;
   };
 
   const parseMontoUSD = (val: any): number => {
@@ -137,7 +133,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
       }
     >();
 
-    asegurados.forEach((item) => {
+    asegurados.forEach((item: any) => {
       const cedulaStr = item.cedula ? String(item.cedula).trim() : '';
       const cedulaKey = cedulaStr || item.nombreApellido.trim();
       const mesDesdeFecha = obtenerMesDesdeFecha(item.fechaPago);
@@ -162,6 +158,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
 
         mapa.set(cedulaKey, {
           ...item,
+          NUMERO: item.NUMERO || item.numero || item.telefono || '',
           cedulaTrim: cedulaStr,
           mesesPagados: mesesAsignados,
           montoCuotaReal: montoUSD > 10 ? 5.99 : montoUSD,
@@ -186,6 +183,9 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
           existente.fechaPago = item.fechaPago;
         }
         if (item.imagenReferencia) existente.imagenReferencia = item.imagenReferencia;
+        if (!existente.NUMERO && (item.NUMERO || item.numero)) {
+          existente.NUMERO = item.NUMERO || item.numero;
+        }
       }
     });
 
@@ -243,8 +243,8 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     const dataToExport = filteredData.map((item) => ({
       'FECHA ÚLT. PAGO': formatFecha(item.fechaPago),
       'NOMBRE Y APELLIDO': item.nombreApellido,
-      'NUMERO': formatTelefono(item),
       CÉDULA: item.cedula,
+      'NUMERO': formatTelefono(item),
       'CUOTA ($)': `$${item.montoCuotaReal.toFixed(2)}`,
       BANCO: item.banco,
       'MES DE ORIGEN': item.mesInicial,
@@ -617,15 +617,15 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         </div>
       </div>
 
-      {/* Tabla Principal */}
+      {/* Tabla Principal reorganizada (Cédula y Teléfono juntos para eliminar espacios) */}
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.75rem', color: '#334155' }}>
           <thead>
             <tr style={{ backgroundColor: '#f1f5f9', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               <th style={{ padding: '0.75rem 1rem' }}>FECHA ÚLT. PAGO</th>
               <th style={{ padding: '0.75rem 1rem' }}>NOMBRE Y APELLIDO</th>
-              <th style={{ padding: '0.75rem 1rem' }}>TELÉFONO</th>
               <th style={{ padding: '0.75rem 1rem' }}>CÉDULA</th>
+              <th style={{ padding: '0.75rem 1rem' }}>TELÉFONO</th>
               <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>CUOTA ($)</th>
               <th style={{ padding: '0.75rem 1rem' }}>BANCO</th>
               <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>JUL</th>
@@ -659,10 +659,10 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
                     <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap' }}>
                       {item.nombreApellido}
                     </td>
+                    <td style={{ padding: '0.75rem 1rem', color: '#334155' }}>{item.cedula}</td>
                     <td style={{ padding: '0.75rem 1rem', color: '#0f172a', fontWeight: 600 }}>
                       {formatTelefono(item)}
                     </td>
-                    <td style={{ padding: '0.75rem 1rem', color: '#334155' }}>{item.cedula}</td>
                     <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700, color: '#0284c7' }}>
                       ${item.montoCuotaReal.toFixed(2)}
                     </td>

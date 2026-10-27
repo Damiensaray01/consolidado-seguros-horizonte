@@ -26,12 +26,12 @@ export default function Home() {
 
     const unsubscribe = onSnapshot(collection(db, 'consolidado_pagos'), (snapshot) => {
       const datos: Asegurado[] = snapshot.docs.map((doc) => {
-        const data = doc.data();
+        const data = doc.data() as any;
         return {
           id: doc.id,
           ...data,
-          // Mapeo directo y seguro de la columna NUMERO desde Firestore/Sheets
-          NUMERO: data.NUMERO || data.numero || data.telefono || data.celular || '',
+          // Mapeo robusto de la columna NUMERO y todas sus posibles variantes en Firestore
+          NUMERO: data.NUMERO || data.numero || data.telefono || data.celular || data.phone || '',
         } as Asegurado;
       });
       setAsegurados(datos);
