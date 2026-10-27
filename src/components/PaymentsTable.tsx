@@ -42,16 +42,17 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     fechaPago: new Date().toISOString().split('T')[0],
   });
 
-  // Lectura directa de la columna NUMERO
+  // Lectura exacta y directa de la columna NUMERO del Google Sheets / Firebase
   const formatTelefono = (item: any) => {
     if (!item) return '-';
+    
     const telRaw = typeof item === 'object'
-      ? (item.NUMERO || item.numero || item.telefono || item.celular)
+      ? (item.NUMERO || item.numero || item.Telefono || item.telefono || item.celular)
       : item;
 
-    if (!telRaw) return '-';
+    if (telRaw === undefined || telRaw === null || telRaw === '') return '-';
     const str = String(telRaw).trim();
-    return str !== '' && str !== 'undefined' ? str : '-';
+    return str !== '' && str !== 'undefined' && str !== 'null' ? str : '-';
   };
 
   const parseMontoUSD = (val: any): number => {
