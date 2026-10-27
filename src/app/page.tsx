@@ -80,7 +80,7 @@ export default function Home() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <img
-              src="/logo1.png"
+              src="/logo3.png"
               alt="Logo Seguros Horizonte"
               style={{ height: '40px', objectFit: 'contain' }}
               onError={(e) => {
