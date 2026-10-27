@@ -25,10 +25,15 @@ export default function Home() {
     if (!isAuthenticated) return;
 
     const unsubscribe = onSnapshot(collection(db, 'consolidado_pagos'), (snapshot) => {
-      const datos: Asegurado[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Omit<Asegurado, 'id'>),
-      }));
+      const datos: Asegurado[] = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          // Mapeo directo y seguro de la columna NUMERO desde Firestore/Sheets
+          NUMERO: data.NUMERO || data.numero || data.telefono || data.celular || '',
+        } as Asegurado;
+      });
       setAsegurados(datos);
     });
 

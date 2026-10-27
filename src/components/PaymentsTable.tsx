@@ -34,7 +34,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
   const [formData, setFormData] = useState<Partial<Asegurado>>({
     nombreApellido: '',
     cedula: '',
-    telefono: '',
+    NUMERO: '',
     banco: 'BANCO PLAZA',
     mes: 'JULIO',
     uds: 5.99,
@@ -42,30 +42,16 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     fechaPago: new Date().toISOString().split('T')[0],
   });
 
-  // Apuntando directamente a la columna NUMERO y sus variantes
+  // Lectura directa de la columna NUMERO
   const formatTelefono = (item: any) => {
     if (!item) return '-';
-    
     const telRaw = typeof item === 'object'
-      ? (item.NUMERO || item.numero || item.telefono || item.telefonoMovil || item.nroTelefono || item.phone || item.celular)
+      ? (item.NUMERO || item.numero || item.telefono || item.celular)
       : item;
 
     if (!telRaw) return '-';
-    let str = String(telRaw).trim();
-    
-    if ((str.includes('GMT') || str.includes('Time') || /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i.test(str)) && !/\d{7}/.test(str)) {
-      return '-';
-    }
-
-    const matches = str.match(/\d+/g);
-    if (matches) {
-      const numerosUnidos = matches.join('');
-      if (numerosUnidos.length >= 7) {
-        return numerosUnidos;
-      }
-    }
-
-    return str !== '' ? str : '-';
+    const str = String(telRaw).trim();
+    return str !== '' && str !== 'undefined' ? str : '-';
   };
 
   const parseMontoUSD = (val: any): number => {
@@ -235,7 +221,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
       item.nombreApellido?.toLowerCase().includes(query) ||
       item.cedula?.includes(searchTerm) ||
       telLimpio.includes(query) ||
-      String(item.NUMERO || item.numero || item.telefono || '').toLowerCase().includes(query);
+      String(item.NUMERO || '').toLowerCase().includes(query);
 
     const matchesBanco = bancoFilter === 'TODOS' || item.banco?.toUpperCase() === bancoFilter.toUpperCase();
 
@@ -256,7 +242,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     const dataToExport = filteredData.map((item) => ({
       'FECHA ÚLT. PAGO': formatFecha(item.fechaPago),
       'NOMBRE Y APELLIDO': item.nombreApellido,
-      TELÉFONO: formatTelefono(item),
+      'NUMERO': formatTelefono(item),
       CÉDULA: item.cedula,
       'CUOTA ($)': `$${item.montoCuotaReal.toFixed(2)}`,
       BANCO: item.banco,
@@ -290,7 +276,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
           {
             nombreApellido: item.nombreApellido,
             cedula: item.cedula,
-            NUMERO: item.NUMERO || item.numero || item.telefono || '',
+            NUMERO: item.NUMERO || '',
             fechaPago: new Date().toISOString().split('T')[0],
             montoBs: item.montoBs || 0,
             uds: 5.99,
@@ -325,7 +311,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     setFormData({
       nombreApellido: item.nombreApellido || '',
       cedula: item.cedula || '',
-      NUMERO: telExtraido !== '-' ? telExtraido : (item.NUMERO || item.numero || item.telefono || ''),
+      NUMERO: telExtraido !== '-' ? telExtraido : (item.NUMERO || ''),
       banco: item.banco || 'BANCO PLAZA',
       mes: item.mesInicial || item.mes || 'JULIO',
       uds: item.montoCuotaReal || item.uds || 5.99,
@@ -350,7 +336,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         {
           nombreApellido: formData.nombreApellido.trim(),
           cedula: String(formData.cedula).trim(),
-          NUMERO: formData.NUMERO || formData.telefono || '',
+          NUMERO: formData.NUMERO || '',
           fechaPago: formData.fechaPago || new Date().toISOString().split('T')[0],
           montoBs: formData.montoBs || 0,
           uds: formData.uds || 5.99,
@@ -778,7 +764,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
               </div>
 
               <div>
-                <label style={{ color: '#64748b', fontWeight: 600 }}>Teléfono (Columna NUMERO)</label>
+                <label style={{ color: '#64748b', fontWeight: 600 }}>Teléfono (NUMERO)</label>
                 <input
                   type="text"
                   value={formData.NUMERO || ''}
