@@ -7,10 +7,13 @@ import { Asegurado } from '../types';
 import { KpiCards } from '../components/KpiCards';
 import { PaymentsTable } from '../components/PaymentsTable';
 import { RecurrenceMatrix } from '../components/RecurrenceMatrix';
+import { LayoutDashboard, TableProperties } from 'lucide-react';
 
 export default function Home() {
   const [asegurados, setAsegurados] = useState<Asegurado[]>([]);
   const [activeTab, setActiveTab] = useState('TODOS');
+  // Estado para alternar entre la vista de Matriz de Recurrencia y la Tabla de Seguimiento de Pagos
+  const [vistaActual, setVistaActual] = useState<'matriz' | 'pagos'>('pagos');
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'consolidado_pagos'), (snapshot) => {
@@ -29,12 +32,12 @@ export default function Home() {
       style={{
         position: 'relative',
         minHeight: '100vh',
-        backgroundColor: '#030712', // Fondo oscuro profundo sin tonos azules recargados
+        backgroundColor: '#030712',
         overflowX: 'hidden',
         color: '#f8fafc',
       }}
     >
-      {/* Capa de fondo con logo5.png ajustado para mayor visibilidad (opacidad del 12%) */}
+      {/* Capa de fondo con logo5.png abarcando toda la pantalla sin cortes */}
       <div
         style={{
           position: 'fixed',
@@ -42,14 +45,14 @@ export default function Home() {
           backgroundImage: 'url(/logo5.png)',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
-          backgroundSize: '45%',
+          backgroundSize: 'cover',
           opacity: 0.12,
           pointerEvents: 'none',
           zIndex: 0,
         }}
       />
 
-      {/* Contenedor principal con separación limpia entre bloques */}
+      {/* Contenedor principal */}
       <div
         style={{
           position: 'relative',
@@ -59,7 +62,7 @@ export default function Home() {
           margin: '0 auto',
           display: 'flex',
           flexDirection: 'column',
-          gap: '2rem',
+          gap: '1.75rem',
         }}
       >
         {/* Encabezado */}
@@ -72,23 +75,65 @@ export default function Home() {
           </p>
         </header>
 
-        {/* 1. Tarjetas KPI Ejecutivas */}
+        {/* Tarjetas KPI Ejecutivas (Siempre visibles arriba) */}
         <section>
           <KpiCards asegurados={asegurados} activeTab={activeTab} />
         </section>
 
-        {/* 2. Matriz de Recurrencia y Análisis */}
-        <section>
-          <RecurrenceMatrix asegurados={asegurados} />
-        </section>
+        {/* Botones de Pestañas Superiores para alternar las vistas */}
+        <div style={{ display: 'flex', gap: '0.75rem', borderBottom: '1px solid #1e293b', paddingBottom: '0.75rem' }}>
+          <button
+            onClick={() => setVistaActual('pagos')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.5rem 1rem',
+              borderRadius: '0.5rem',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: 'none',
+              backgroundColor: vistaActual === 'pagos' ? '#2563eb' : '#1e293b',
+              color: vistaActual === 'pagos' ? '#ffffff' : '#94a3b8',
+              transition: 'background-color 0.2s',
+            }}
+          >
+            <TableProperties size={15} /> Detalle y Seguimiento de Pagos
+          </button>
 
-        {/* 3. Tabla Interactiva de Pagos y Seguimiento */}
-        <section style={{ marginTop: '1rem' }}>
-          <PaymentsTable
-            asegurados={asegurados}
-            onSelectAsegurado={(item) => console.log('Seleccionado:', item)}
-            onTabChange={(tab) => setActiveTab(tab)}
-          />
+          <button
+            onClick={() => setVistaActual('matriz')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.5rem 1rem',
+              borderRadius: '0.5rem',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: 'none',
+              backgroundColor: vistaActual === 'matriz' ? '#2563eb' : '#1e293b',
+              color: vistaActual === 'matriz' ? '#ffffff' : '#94a3b8',
+              transition: 'background-color 0.2s',
+            }}
+          >
+            <LayoutDashboard size={15} /> Matriz de Recurrencia (Banco Plaza - Banesco)
+          </button>
+        </div>
+
+        {/* Contenido condicional según la pestaña seleccionada */}
+        <section>
+          {vistaActual === 'matriz' ? (
+            <RecurrenceMatrix asegurados={asegurados} />
+          ) : (
+            <PaymentsTable
+              asegurados={asegurados}
+              onSelectAsegurado={(item) => console.log('Seleccionado:', item)}
+              onTabChange={(tab) => setActiveTab(tab)}
+            />
+          )}
         </section>
       </div>
     </main>
