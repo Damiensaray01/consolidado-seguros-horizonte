@@ -42,6 +42,20 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     fechaPago: new Date().toISOString().split('T')[0],
   });
 
+  // Función robusta para limpiar y formatear el número telefónico
+  const formatTelefono = (telRaw: any) => {
+    if (!telRaw) return '-';
+    const str = String(telRaw).trim();
+    
+    // Si contiene marcas de tiempo o días de la semana de JS, filtramos o intentamos extraer números
+    if (str.includes('GMT') || str.includes('Time') || /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i.test(str)) {
+      const match = str.match(/(\+?58\d{10}|\b04\d{9}\b|\b4\d{9}\b)/);
+      return match ? match[0] : '-';
+    }
+    
+    return str;
+  };
+
   const parseMontoUSD = (val: any): number => {
     if (val === undefined || val === null) return 5.99;
     let num = typeof val === 'number' ? val : parseFloat(String(val).replace(/\./g, '').replace(',', '.')) || 5.99;
@@ -151,7 +165,6 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
           ...item,
           cedulaTrim: cedulaStr,
           mesesPagados: mesesAsignados,
-          // Fijamos el monto unitario individual en lugar de acumularlo
           montoCuotaReal: montoUSD > 10 ? 5.99 : montoUSD,
           mesInicial: CEDULAS_JULIO_FORZADAS.has(cedulaStr) ? 'JULIO' : mesItem,
           fechasPagos: item.fechaPago ? [item.fechaPago] : [],
@@ -204,10 +217,13 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
   const filteredData = aseguradosConsolidados.filter((item) => {
     const matchesMes = activeTab === 'TODOS' || item.mesInicial === activeTab;
 
+    const query = searchTerm.toLowerCase();
+    const telLimpio = formatTelefono(item.telefono).toLowerCase();
     const matchesSearch =
-      item.nombreApellido?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.nombreApellido?.toLowerCase().includes(query) ||
       item.cedula?.includes(searchTerm) ||
-      item.telefono?.includes(searchTerm);
+      telLimpio.includes(query) ||
+      String(item.telefono || '').toLowerCase().includes(query);
 
     const matchesBanco = bancoFilter === 'TODOS' || item.banco?.toUpperCase() === bancoFilter.toUpperCase();
 
@@ -224,7 +240,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     const dataToExport = filteredData.map((item) => ({
       'FECHA ÚLT. PAGO': formatFecha(item.fechaPago),
       'NOMBRE Y APELLIDO': item.nombreApellido,
-      TELÉFONO: item.telefono || '-',
+      TELÉFONO: formatTelefono(item.telefono),
       CÉDULA: item.cedula,
       'CUOTA ($)': `$${item.montoCuotaReal.toFixed(2)}`,
       BANCO: item.banco,
@@ -596,7 +612,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
                     <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#f8fafc', whiteSpace: 'nowrap' }}>
                       {item.nombreApellido}
                     </td>
-                    <td style={{ padding: '0.75rem 1rem', color: '#94a3b8' }}>{item.telefono || '-'}</td>
+                    <td style={{ padding: '0.75rem 1rem', color: '#94a3b8' }}>{formatTelefono(item.telefono)}</td>
                     <td style={{ padding: '0.75rem 1rem', color: '#e2e8f0' }}>{item.cedula}</td>
                     <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700, color: '#34d399' }}>
                       ${item.montoCuotaReal.toFixed(2)}
