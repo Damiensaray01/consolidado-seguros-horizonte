@@ -42,17 +42,21 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     fechaPago: new Date().toISOString().split('T')[0],
   });
 
-  // Función reforzada para forzar la visualización de los números telefónicos
-  const formatTelefono = (telRaw: any) => {
+  // Apuntando directamente a la columna NUMERO y sus variantes
+  const formatTelefono = (item: any) => {
+    if (!item) return '-';
+    
+    const telRaw = typeof item === 'object'
+      ? (item.NUMERO || item.numero || item.telefono || item.telefonoMovil || item.nroTelefono || item.phone || item.celular)
+      : item;
+
     if (!telRaw) return '-';
     let str = String(telRaw).trim();
     
-    // Si contiene marcas de tiempo puros sin dígitos, omitir
     if ((str.includes('GMT') || str.includes('Time') || /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i.test(str)) && !/\d{7}/.test(str)) {
       return '-';
     }
 
-    // Extraer cualquier secuencia de dígitos disponible
     const matches = str.match(/\d+/g);
     if (matches) {
       const numerosUnidos = matches.join('');
@@ -226,12 +230,12 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     const matchesMes = activeTab === 'TODOS' || item.mesInicial === activeTab;
 
     const query = searchTerm.toLowerCase();
-    const telLimpio = formatTelefono(item.telefono).toLowerCase();
+    const telLimpio = formatTelefono(item).toLowerCase();
     const matchesSearch =
       item.nombreApellido?.toLowerCase().includes(query) ||
       item.cedula?.includes(searchTerm) ||
       telLimpio.includes(query) ||
-      String(item.telefono || '').toLowerCase().includes(query);
+      String(item.NUMERO || item.numero || item.telefono || '').toLowerCase().includes(query);
 
     const matchesBanco = bancoFilter === 'TODOS' || item.banco?.toUpperCase() === bancoFilter.toUpperCase();
 
@@ -252,7 +256,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     const dataToExport = filteredData.map((item) => ({
       'FECHA ÚLT. PAGO': formatFecha(item.fechaPago),
       'NOMBRE Y APELLIDO': item.nombreApellido,
-      TELÉFONO: formatTelefono(item.telefono),
+      TELÉFONO: formatTelefono(item),
       CÉDULA: item.cedula,
       'CUOTA ($)': `$${item.montoCuotaReal.toFixed(2)}`,
       BANCO: item.banco,
@@ -286,7 +290,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
           {
             nombreApellido: item.nombreApellido,
             cedula: item.cedula,
-            telefono: item.telefono || '',
+            NUMERO: item.NUMERO || item.numero || item.telefono || '',
             fechaPago: new Date().toISOString().split('T')[0],
             montoBs: item.montoBs || 0,
             uds: 5.99,
@@ -306,7 +310,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     setFormData({
       nombreApellido: '',
       cedula: '',
-      telefono: '',
+      NUMERO: '',
       banco: 'BANCO PLAZA',
       mes: activeTab !== 'TODOS' ? activeTab : 'JULIO',
       uds: 5.99,
@@ -317,10 +321,11 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
   };
 
   const abrirModalEditar = (item: any) => {
+    const telExtraido = formatTelefono(item);
     setFormData({
       nombreApellido: item.nombreApellido || '',
       cedula: item.cedula || '',
-      telefono: formatTelefono(item.telefono) !== '-' ? formatTelefono(item.telefono) : (item.telefono || ''),
+      NUMERO: telExtraido !== '-' ? telExtraido : (item.NUMERO || item.numero || item.telefono || ''),
       banco: item.banco || 'BANCO PLAZA',
       mes: item.mesInicial || item.mes || 'JULIO',
       uds: item.montoCuotaReal || item.uds || 5.99,
@@ -345,7 +350,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         {
           nombreApellido: formData.nombreApellido.trim(),
           cedula: String(formData.cedula).trim(),
-          telefono: formData.telefono || '',
+          NUMERO: formData.NUMERO || formData.telefono || '',
           fechaPago: formData.fechaPago || new Date().toISOString().split('T')[0],
           montoBs: formData.montoBs || 0,
           uds: formData.uds || 5.99,
@@ -668,7 +673,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
                       {item.nombreApellido}
                     </td>
                     <td style={{ padding: '0.75rem 1rem', color: '#0f172a', fontWeight: 600 }}>
-                      {formatTelefono(item.telefono)}
+                      {formatTelefono(item)}
                     </td>
                     <td style={{ padding: '0.75rem 1rem', color: '#334155' }}>{item.cedula}</td>
                     <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700, color: '#0284c7' }}>
@@ -773,11 +778,11 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
               </div>
 
               <div>
-                <label style={{ color: '#64748b', fontWeight: 600 }}>Teléfono</label>
+                <label style={{ color: '#64748b', fontWeight: 600 }}>Teléfono (Columna NUMERO)</label>
                 <input
                   type="text"
-                  value={formData.telefono || ''}
-                  onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+                  value={formData.NUMERO || ''}
+                  onChange={(e) => setFormData({ ...formData, NUMERO: e.target.value })}
                   style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', padding: '0.4rem', borderRadius: '0.375rem', marginTop: '0.2rem', boxSizing: 'border-box' }}
                 />
               </div>
