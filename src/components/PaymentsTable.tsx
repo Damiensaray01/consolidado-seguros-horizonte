@@ -42,10 +42,10 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     fechaPago: new Date().toISOString().split('T')[0],
   });
 
-  // Función robusta para extraer el número de teléfono/NUMERO
+  // Función robusta para extraer el número de la columna NUMERO o sus variantes
   const formatTelefono = (item: any) => {
     if (!item) return '-';
-    const val = item.NUMERO || item.numero || item.telefono || item.celular || item.phone || '';
+    const val = item.NUMERO || item.numero || item.Telefono || item.telefono || item.celular || item.phone || '';
     const str = String(val).trim();
     if (!str || str === 'undefined' || str === 'null') return '-';
     return str;
@@ -189,28 +189,34 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
       }
     });
 
-    return Array.from(mapa.values()).map((item) => {
-      if (CEDULAS_JULIO_FORZADAS.has(item.cedulaTrim)) {
-        return { ...item, mesInicial: 'JULIO' };
-      }
+    return Array.from(mapa.values())
+      .map((item) => {
+        if (CEDULAS_JULIO_FORZADAS.has(item.cedulaTrim)) {
+          return { ...item, mesInicial: 'JULIO' };
+        }
 
-      let fechaMasAntigua = item.fechaPago;
-      if (item.fechasPagos.length > 0) {
-        const fechasOrdenadas = item.fechasPagos.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-        fechaMasAntigua = fechasOrdenadas[0];
-      }
+        let fechaMasAntigua = item.fechaPago;
+        if (item.fechasPagos.length > 0) {
+          const fechasOrdenadas = item.fechasPagos.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+          fechaMasAntigua = fechasOrdenadas[0];
+        }
 
-      const mesDesdeFechaInicial = obtenerMesDesdeFecha(fechaMasAntigua);
-      const primerMes =
-        mesDesdeFechaInicial ||
-        MESES_ORDENADOS.find((m) => item.mesesPagados.has(m)) ||
-        item.mesInicial;
+        const mesDesdeFechaInicial = obtenerMesDesdeFecha(fechaMasAntigua);
+        const primerMes =
+          mesDesdeFechaInicial ||
+          MESES_ORDENADOS.find((m) => item.mesesPagados.has(m)) ||
+          item.mesInicial;
 
-      return {
-        ...item,
-        mesInicial: primerMes,
-      };
-    });
+        return {
+          ...item,
+          mesInicial: primerMes,
+        };
+      })
+      .sort((a, b) => {
+        const dateA = a.fechaPago ? new Date(a.fechaPago).getTime() : 0;
+        const dateB = b.fechaPago ? new Date(b.fechaPago).getTime() : 0;
+        return dateB - dateA;
+      });
   }, [asegurados]);
 
   const filteredData = aseguradosConsolidados.filter((item) => {
@@ -244,7 +250,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
       'FECHA ÚLT. PAGO': formatFecha(item.fechaPago),
       'NOMBRE Y APELLIDO': item.nombreApellido,
       CÉDULA: item.cedula,
-      'NUMERO': formatTelefono(item),
+      NUMERO: formatTelefono(item),
       'CUOTA ($)': `$${item.montoCuotaReal.toFixed(2)}`,
       BANCO: item.banco,
       'MES DE ORIGEN': item.mesInicial,
