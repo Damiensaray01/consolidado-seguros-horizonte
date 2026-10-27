@@ -42,15 +42,26 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     fechaPago: new Date().toISOString().split('T')[0],
   });
 
-  // Función mejorada para formatear y limpiar el teléfono
+  // Función reforzada para forzar la visualización de los números telefónicos
   const formatTelefono = (telRaw: any) => {
     if (!telRaw) return '-';
-    const str = String(telRaw).trim();
-    if (str.includes('GMT') || str.includes('Time') || /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i.test(str)) {
-      const match = str.match(/(\+?58\d{10}|\b04\d{9}\b|\b4\d{9}\b|\d{7,})/);
-      return match ? match[0] : '-';
+    let str = String(telRaw).trim();
+    
+    // Si contiene marcas de tiempo puros sin dígitos, omitir
+    if ((str.includes('GMT') || str.includes('Time') || /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i.test(str)) && !/\d{7}/.test(str)) {
+      return '-';
     }
-    return str;
+
+    // Extraer cualquier secuencia de dígitos disponible
+    const matches = str.match(/\d+/g);
+    if (matches) {
+      const numerosUnidos = matches.join('');
+      if (numerosUnidos.length >= 7) {
+        return numerosUnidos;
+      }
+    }
+
+    return str !== '' ? str : '-';
   };
 
   const parseMontoUSD = (val: any): number => {
@@ -225,10 +236,14 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     const matchesBanco = bancoFilter === 'TODOS' || item.banco?.toUpperCase() === bancoFilter.toUpperCase();
 
     const estatusCalculado = calcularEstatusDeuda(item, item.mesesPagados);
-    const matchesStatus =
-      statusFilter === 'TODOS' ||
-      (statusFilter === 'Solvente' && estatusCalculado === 'Solvente') ||
-      (statusFilter !== 'Solvente' && estatusCalculado.includes(statusFilter));
+    let matchesStatus = true;
+    if (statusFilter === 'Solvente') {
+      matchesStatus = estatusCalculado === 'Solvente';
+    } else if (statusFilter === 'Debe 1') {
+      matchesStatus = estatusCalculado.includes('Debe 1');
+    } else if (statusFilter === 'Debe Mas') {
+      matchesStatus = estatusCalculado.includes('Debe') && !estatusCalculado.includes('Debe 1');
+    }
 
     return matchesMes && matchesSearch && matchesBanco && matchesStatus;
   });
@@ -305,7 +320,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     setFormData({
       nombreApellido: item.nombreApellido || '',
       cedula: item.cedula || '',
-      telefono: item.telefono || '',
+      telefono: formatTelefono(item.telefono) !== '-' ? formatTelefono(item.telefono) : (item.telefono || ''),
       banco: item.banco || 'BANCO PLAZA',
       mes: item.mesInicial || item.mes || 'JULIO',
       uds: item.montoCuotaReal || item.uds || 5.99,
@@ -349,16 +364,16 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
 
   const getStatusBadge = (estatus: string) => {
     let bg = 'rgba(16, 185, 129, 0.15)';
-    let color = '#34d399';
+    let color = '#059669';
     let border = 'rgba(16, 185, 129, 0.3)';
 
     if (estatus.includes('Debe 1')) {
       bg = 'rgba(245, 158, 11, 0.15)';
-      color = '#fbbf24';
+      color = '#d97706';
       border = 'rgba(245, 158, 11, 0.3)';
     } else if (estatus.includes('Debe')) {
       bg = 'rgba(239, 68, 68, 0.15)';
-      color = '#f87171';
+      color = '#dc2626';
       border = 'rgba(239, 68, 68, 0.3)';
     }
 
@@ -379,34 +394,25 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     );
   };
 
-  const inputStyle: React.CSSProperties = {
-    backgroundColor: '#0f172a',
-    border: '1px solid #334155',
-    color: '#ffffff',
-    padding: '0.4rem 0.75rem',
-    borderRadius: '0.5rem',
-    outline: 'none',
-    fontSize: '0.75rem',
-  };
-
   return (
     <div
       style={{
-        backgroundColor: '#1e293b',
-        border: '1px solid #334155',
+        backgroundColor: '#ffffff',
+        border: '1px solid #e2e8f0',
         borderRadius: '1rem',
         overflow: 'hidden',
-        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
       }}
     >
+      {/* Selector de Meses */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           padding: '0.75rem 1rem 0 1rem',
-          borderBottom: '1px solid #334155',
-          backgroundColor: '#0f172a',
+          borderBottom: '1px solid #e2e8f0',
+          backgroundColor: '#f8fafc',
           flexWrap: 'wrap',
           gap: '0.5rem',
         }}
@@ -434,21 +440,21 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
                   borderTopLeftRadius: '0.5rem',
                   borderTopRightRadius: '0.5rem',
                   border: '1px solid',
-                  borderColor: isActive ? '#334155 #334155 transparent #334155' : 'transparent',
-                  backgroundColor: isActive ? '#1e293b' : 'transparent',
-                  color: isActive ? '#38bdf8' : '#94a3b8',
+                  borderColor: isActive ? '#e2e8f0 #e2e8f0 transparent #e2e8f0' : 'transparent',
+                  backgroundColor: isActive ? '#ffffff' : 'transparent',
+                  color: isActive ? '#0284c7' : '#64748b',
                   fontWeight: isActive ? 700 : 500,
                   fontSize: '0.75rem',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
                 }}
               >
-                <Calendar size={13} color={isActive ? '#38bdf8' : '#64748b'} />
+                <Calendar size={13} color={isActive ? '#0284c7' : '#94a3b8'} />
                 <span>{mes}</span>
                 <span
                   style={{
-                    backgroundColor: isActive ? 'rgba(56, 189, 248, 0.2)' : '#0f172a',
-                    color: isActive ? '#38bdf8' : '#64748b',
+                    backgroundColor: isActive ? 'rgba(2, 132, 199, 0.1)' : '#f1f5f9',
+                    color: isActive ? '#0284c7' : '#64748b',
                     padding: '0.1rem 0.4rem',
                     borderRadius: '9999px',
                     fontSize: '0.65rem',
@@ -468,8 +474,8 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
             display: 'flex',
             alignItems: 'center',
             gap: '0.35rem',
-            backgroundColor: '#38bdf8',
-            color: '#0f172a',
+            backgroundColor: '#0284c7',
+            color: '#ffffff',
             border: 'none',
             borderRadius: '0.5rem',
             padding: '0.4rem 0.75rem',
@@ -483,11 +489,58 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         </button>
       </div>
 
+      {/* Botonera Interactiva de Filtro Rápido por Estatus de Gestión */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '0.5rem',
+          padding: '0.75rem 1rem',
+          backgroundColor: '#f8fafc',
+          borderBottom: '1px solid #e2e8f0',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+        }}
+      >
+        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginRight: '0.5rem' }}>
+          Filtrar Estatus:
+        </span>
+
+        {[
+          { label: 'Todos', value: 'TODOS' },
+          { label: 'Solventes', value: 'Solvente' },
+          { label: 'Debe 1 Cuota', value: 'Debe 1' },
+          { label: 'Debe + de 1 Cuota', value: 'Debe Mas' },
+        ].map((btn) => {
+          const isSelected = statusFilter === btn.value;
+          return (
+            <button
+              key={btn.value}
+              onClick={() => setStatusFilter(btn.value)}
+              style={{
+                padding: '0.35rem 0.85rem',
+                borderRadius: '9999px',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                border: isSelected ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                backgroundColor: isSelected ? '#0284c7' : '#ffffff',
+                color: isSelected ? '#ffffff' : '#334155',
+                boxShadow: isSelected ? '0 2px 4px rgba(2, 132, 199, 0.2)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {btn.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Filtros de Búsqueda y Acciones */}
       <div
         style={{
           padding: '1rem',
-          borderBottom: '1px solid #334155',
-          backgroundColor: '#1e293b',
+          borderBottom: '1px solid #e2e8f0',
+          backgroundColor: '#ffffff',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -506,7 +559,17 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
             placeholder="Buscar por titular, C.I. o teléfono..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ ...inputStyle, paddingLeft: '2.25rem', width: '100%', boxSizing: 'border-box' }}
+            style={{
+              backgroundColor: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              color: '#0f172a',
+              padding: '0.4rem 0.75rem 0.4rem 2.25rem',
+              borderRadius: '0.5rem',
+              outline: 'none',
+              fontSize: '0.75rem',
+              width: '100%',
+              boxSizing: 'border-box',
+            }}
           />
         </div>
 
@@ -516,34 +579,28 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
               display: 'flex',
               alignItems: 'center',
               gap: '0.35rem',
-              backgroundColor: '#0f172a',
-              border: '1px solid #334155',
+              backgroundColor: '#f8fafc',
+              border: '1px solid #cbd5e1',
               borderRadius: '0.5rem',
               padding: '0.2rem 0.5rem',
             }}
           >
-            <Filter size={12} color="#94a3b8" />
+            <Filter size={12} color="#64748b" />
             <select
               value={bancoFilter}
               onChange={(e) => setBancoFilter(e.target.value)}
               style={{
                 backgroundColor: 'transparent',
                 border: 'none',
-                color: '#e2e8f0',
+                color: '#334155',
                 fontSize: '0.75rem',
                 outline: 'none',
                 cursor: 'pointer',
               }}
             >
-              <option value="TODOS" style={{ backgroundColor: '#1e293b' }}>
-                Todos los Bancos
-              </option>
-              <option value="BANCO PLAZA" style={{ backgroundColor: '#1e293b' }}>
-                BANCO PLAZA
-              </option>
-              <option value="BANESCO" style={{ backgroundColor: '#1e293b' }}>
-                BANESCO
-              </option>
+              <option value="TODOS">Todos los Bancos</option>
+              <option value="BANCO PLAZA">BANCO PLAZA</option>
+              <option value="BANESCO">BANESCO</option>
             </select>
           </div>
 
@@ -553,7 +610,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
               display: 'flex',
               alignItems: 'center',
               gap: '0.35rem',
-              backgroundColor: '#10b981',
+              backgroundColor: '#059669',
               color: '#ffffff',
               border: 'none',
               borderRadius: '0.5rem',
@@ -568,10 +625,11 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         </div>
       </div>
 
+      {/* Tabla Principal */}
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.75rem', color: '#cbd5e1' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.75rem', color: '#334155' }}>
           <thead>
-            <tr style={{ backgroundColor: '#0f172a', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <tr style={{ backgroundColor: '#f1f5f9', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               <th style={{ padding: '0.75rem 1rem' }}>FECHA ÚLT. PAGO</th>
               <th style={{ padding: '0.75rem 1rem' }}>NOMBRE Y APELLIDO</th>
               <th style={{ padding: '0.75rem 1rem' }}>TELÉFONO</th>
@@ -589,7 +647,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
               <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>ACCIONES</th>
             </tr>
           </thead>
-          <tbody style={{ fontFamily: 'monospace' }}>
+          <tbody>
             {filteredData.length > 0 ? (
               filteredData.map((item, idx) => {
                 const tieneJul = item.mesesPagados.has('JULIO');
@@ -602,40 +660,41 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
                 const estatusCalculado = calcularEstatusDeuda(item, item.mesesPagados);
 
                 return (
-                  <tr key={item.cedula || idx} style={{ borderBottom: '1px solid #334155' }}>
-                    <td style={{ padding: '0.75rem 1rem', color: '#94a3b8', whiteSpace: 'nowrap', fontFamily: 'sans-serif' }}>
+                  <tr key={item.cedula || idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '0.75rem 1rem', color: '#64748b', whiteSpace: 'nowrap' }}>
                       {formatFecha(item.fechaPago)}
                     </td>
-                    <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#ffffff', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap' }}>
                       {item.nombreApellido}
                     </td>
-                    <td style={{ padding: '0.75rem 1rem', color: '#cbd5e1' }}>{formatTelefono(item.telefono)}</td>
-                    <td style={{ padding: '0.75rem 1rem', color: '#e2e8f0' }}>{item.cedula}</td>
-                    <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700, color: '#38bdf8' }}>
+                    <td style={{ padding: '0.75rem 1rem', color: '#0f172a', fontWeight: 600 }}>
+                      {formatTelefono(item.telefono)}
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', color: '#334155' }}>{item.cedula}</td>
+                    <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700, color: '#0284c7' }}>
                       ${item.montoCuotaReal.toFixed(2)}
                     </td>
                     <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
                       <span
                         style={{
-                          backgroundColor: '#0f172a',
-                          border: '1px solid #334155',
+                          backgroundColor: '#f8fafc',
+                          border: '1px solid #cbd5e1',
                           padding: '0.15rem 0.4rem',
                           borderRadius: '0.25rem',
                           fontSize: '0.65rem',
-                          color: '#cbd5e1',
-                          fontFamily: 'sans-serif',
+                          color: '#475569',
                         }}
                       >
                         {item.banco}
                       </span>
                     </td>
-                    <td onClick={() => toggleCuotaMes(item, 'JULIO', tieneJul)} style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 700, color: tieneJul ? '#38bdf8' : '#475569', cursor: 'pointer' }}>{tieneJul ? '1' : '0'}</td>
-                    <td onClick={() => toggleCuotaMes(item, 'AGOSTO', tieneAgo)} style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 700, color: tieneAgo ? '#38bdf8' : '#475569', cursor: 'pointer' }}>{tieneAgo ? '1' : '0'}</td>
-                    <td onClick={() => toggleCuotaMes(item, 'SEPTIEMBRE', tieneSep)} style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 700, color: tieneSep ? '#38bdf8' : '#475569', cursor: 'pointer' }}>{tieneSep ? '1' : '0'}</td>
-                    <td onClick={() => toggleCuotaMes(item, 'OCTUBRE', tieneOct)} style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 700, color: tieneOct ? '#38bdf8' : '#475569', cursor: 'pointer' }}>{tieneOct ? '1' : '0'}</td>
-                    <td onClick={() => toggleCuotaMes(item, 'NOVIEMBRE', tieneNov)} style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 700, color: tieneNov ? '#38bdf8' : '#475569', cursor: 'pointer' }}>{tieneNov ? '1' : '0'}</td>
-                    <td onClick={() => toggleCuotaMes(item, 'DICIEMBRE', tieneDic)} style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 700, color: tieneDic ? '#38bdf8' : '#475569', cursor: 'pointer' }}>{tieneDic ? '1' : '0'}</td>
-                    <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap', fontFamily: 'sans-serif' }}>
+                    <td onClick={() => toggleCuotaMes(item, 'JULIO', tieneJul)} style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 700, color: tieneJul ? '#0284c7' : '#cbd5e1', cursor: 'pointer' }}>{tieneJul ? '1' : '0'}</td>
+                    <td onClick={() => toggleCuotaMes(item, 'AGOSTO', tieneAgo)} style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 700, color: tieneAgo ? '#0284c7' : '#cbd5e1', cursor: 'pointer' }}>{tieneAgo ? '1' : '0'}</td>
+                    <td onClick={() => toggleCuotaMes(item, 'SEPTIEMBRE', tieneSep)} style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 700, color: tieneSep ? '#0284c7' : '#cbd5e1', cursor: 'pointer' }}>{tieneSep ? '1' : '0'}</td>
+                    <td onClick={() => toggleCuotaMes(item, 'OCTUBRE', tieneOct)} style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 700, color: tieneOct ? '#0284c7' : '#cbd5e1', cursor: 'pointer' }}>{tieneOct ? '1' : '0'}</td>
+                    <td onClick={() => toggleCuotaMes(item, 'NOVIEMBRE', tieneNov)} style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 700, color: tieneNov ? '#0284c7' : '#cbd5e1', cursor: 'pointer' }}>{tieneNov ? '1' : '0'}</td>
+                    <td onClick={() => toggleCuotaMes(item, 'DICIEMBRE', tieneDic)} style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 700, color: tieneDic ? '#0284c7' : '#cbd5e1', cursor: 'pointer' }}>{tieneDic ? '1' : '0'}</td>
+                    <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
                       {getStatusBadge(estatusCalculado)}
                     </td>
                     <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
@@ -645,9 +704,9 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
                           target="_blank"
                           rel="noreferrer"
                           style={{
-                            backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                            color: '#38bdf8',
-                            border: '1px solid rgba(56, 189, 248, 0.3)',
+                            backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                            color: '#0284c7',
+                            border: '1px solid rgba(2, 132, 199, 0.2)',
                             borderRadius: '0.375rem',
                             padding: '0.25rem 0.4rem',
                             display: 'inline-flex',
@@ -658,11 +717,11 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
                           <ExternalLink size={12} />
                         </a>
                       ) : (
-                        <span style={{ color: '#475569' }}>-</span>
+                        <span style={{ color: '#94a3b8' }}>-</span>
                       )}
                     </td>
                     <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
-                      <button onClick={() => abrirModalEditar(item)} style={{ backgroundColor: '#334155', color: '#ffffff', border: 'none', borderRadius: '0.375rem', padding: '0.25rem 0.5rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                      <button onClick={() => abrirModalEditar(item)} style={{ backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '0.375rem', padding: '0.25rem 0.5rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
                         <Edit3 size={12} /> Editar
                       </button>
                     </td>
@@ -672,7 +731,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
             ) : (
               <tr>
                 <td colSpan={15} style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
-                  <FileSpreadsheet size={28} color="#64748b" style={{ margin: '0 auto 0.5rem auto', display: 'block' }} />
+                  <FileSpreadsheet size={28} color="#cbd5e1" style={{ margin: '0 auto 0.5rem auto', display: 'block' }} />
                   No se encontraron registros de ingreso para el mes seleccionado.
                 </td>
               </tr>
@@ -681,53 +740,54 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         </table>
       </div>
 
+      {/* Modal de Crear / Editar */}
       {modalMode && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 50 }}>
-          <div style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '1rem', padding: '1.5rem', width: '90%', maxWidth: '450px', color: '#ffffff' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 50 }}>
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '1rem', padding: '1.5rem', width: '90%', maxWidth: '450px', color: '#0f172a', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
                 {modalMode === 'create' ? 'Crear Nuevo Registro' : `Editar Titular (${formData.cedula})`}
               </h3>
-              <X size={18} style={{ cursor: 'pointer' }} onClick={() => setModalMode(null)} />
+              <X size={18} style={{ cursor: 'pointer', color: '#64748b' }} onClick={() => setModalMode(null)} />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.8rem' }}>
               <div>
-                <label style={{ color: '#94a3b8' }}>Nombre y Apellido</label>
+                <label style={{ color: '#64748b', fontWeight: 600 }}>Nombre y Apellido</label>
                 <input
                   type="text"
                   value={formData.nombreApellido || ''}
                   onChange={(e) => setFormData({ ...formData, nombreApellido: e.target.value })}
-                  style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '0.4rem', borderRadius: '0.375rem', marginTop: '0.2rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', padding: '0.4rem', borderRadius: '0.375rem', marginTop: '0.2rem', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ color: '#94a3b8' }}>Cédula</label>
+                <label style={{ color: '#64748b', fontWeight: 600 }}>Cédula</label>
                 <input
                   type="text"
                   value={formData.cedula || ''}
                   onChange={(e) => setFormData({ ...formData, cedula: e.target.value })}
-                  style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '0.4rem', borderRadius: '0.375rem', marginTop: '0.2rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', padding: '0.4rem', borderRadius: '0.375rem', marginTop: '0.2rem', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ color: '#94a3b8' }}>Teléfono</label>
+                <label style={{ color: '#64748b', fontWeight: 600 }}>Teléfono</label>
                 <input
                   type="text"
                   value={formData.telefono || ''}
                   onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                  style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '0.4rem', borderRadius: '0.375rem', marginTop: '0.2rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', padding: '0.4rem', borderRadius: '0.375rem', marginTop: '0.2rem', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ color: '#94a3b8' }}>Banco</label>
+                <label style={{ color: '#64748b', fontWeight: 600 }}>Banco</label>
                 <select
                   value={formData.banco || 'BANCO PLAZA'}
                   onChange={(e) => setFormData({ ...formData, banco: e.target.value })}
-                  style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '0.4rem', borderRadius: '0.375rem', marginTop: '0.2rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', padding: '0.4rem', borderRadius: '0.375rem', marginTop: '0.2rem', boxSizing: 'border-box' }}
                 >
                   <option value="BANCO PLAZA">BANCO PLAZA</option>
                   <option value="BANESCO">BANESCO</option>
@@ -735,11 +795,11 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
               </div>
 
               <div>
-                <label style={{ color: '#94a3b8' }}>Mes de Origen</label>
+                <label style={{ color: '#64748b', fontWeight: 600 }}>Mes de Origen</label>
                 <select
                   value={formData.mes || 'JULIO'}
                   onChange={(e) => setFormData({ ...formData, mes: e.target.value })}
-                  style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '0.4rem', borderRadius: '0.375rem', marginTop: '0.2rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', padding: '0.4rem', borderRadius: '0.375rem', marginTop: '0.2rem', boxSizing: 'border-box' }}
                 >
                   {MESES.filter(m => m !== 'TODOS').map((m) => (
                     <option key={m} value={m}>{m}</option>
@@ -748,22 +808,22 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
               </div>
 
               <div>
-                <label style={{ color: '#94a3b8' }}>Cuota ($ USD)</label>
+                <label style={{ color: '#64748b', fontWeight: 600 }}>Cuota ($ USD)</label>
                 <input
                   type="number"
                   step="0.01"
                   value={formData.uds || 5.99}
                   onChange={(e) => setFormData({ ...formData, uds: parseFloat(e.target.value) || 5.99 })}
-                  style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '0.4rem', borderRadius: '0.375rem', marginTop: '0.2rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', padding: '0.4rem', borderRadius: '0.375rem', marginTop: '0.2rem', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.25rem' }}>
-              <button onClick={() => setModalMode(null)} style={{ backgroundColor: '#334155', color: '#fff', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '0.375rem', cursor: 'pointer' }}>
+              <button onClick={() => setModalMode(null)} style={{ backgroundColor: '#e2e8f0', color: '#334155', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: 600 }}>
                 Cancelar
               </button>
-              <button onClick={guardarRegistroModal} style={{ backgroundColor: '#38bdf8', color: '#0f172a', fontWeight: 700, border: 'none', padding: '0.4rem 0.8rem', borderRadius: '0.375rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+              <button onClick={guardarRegistroModal} style={{ backgroundColor: '#0284c7', color: '#ffffff', fontWeight: 700, border: 'none', padding: '0.4rem 0.8rem', borderRadius: '0.375rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
                 <Check size={14} /> Guardar
               </button>
             </div>
