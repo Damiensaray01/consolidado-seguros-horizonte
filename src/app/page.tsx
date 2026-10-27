@@ -49,7 +49,7 @@ export default function Home() {
         }}
       />
 
-      {/* Contenido principal del dashboard */}
+      {/* Contenido principal unificado */}
       <div style={{ position: 'relative', zIndex: 1, padding: '1.5rem', maxWidth: '1600px', margin: '0 auto' }}>
         <header style={{ marginBottom: '1.5rem', borderBottom: '1px solid #1e293b', paddingBottom: '1rem' }}>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
@@ -63,10 +63,10 @@ export default function Home() {
         {/* Tarjetas KPI Ejecutivas */}
         <KpiCards asegurados={asegurados} activeTab={activeTab} />
 
-        {/* Matriz de Recurrencia y Gráficos */}
+        {/* Matriz de Recurrencia y Análisis */}
         <RecurrenceMatrix asegurados={asegurados} />
 
-        {/* Tabla Interactiva de Pagos */}
+        {/* Tabla Interactiva de Pagos con pestañas de seguimiento */}
         <div style={{ marginTop: '2rem' }}>
           <PaymentsTable
             asegurados={asegurados}
