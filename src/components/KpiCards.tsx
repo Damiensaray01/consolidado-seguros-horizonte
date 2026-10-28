@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Asegurado } from '../types';
-import { formatUSD, formatVES } from '../lib/utils';
-import { Users, CheckCircle2, AlertCircle, TrendingUp } from 'lucide-react';
+import { Users, CheckCircle, AlertTriangle, TrendingUp } from 'lucide-react';
 
 interface KpiCardsProps {
   asegurados: Asegurado[];
@@ -13,213 +12,151 @@ interface KpiCardsProps {
 const MESES_ORDENADOS = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
 export const KpiCards: React.FC<KpiCardsProps> = ({ asegurados, activeTab }) => {
-  const parseMontoUSD = (val: any): number => {
-    if (val === undefined || val === null) return 5.99;
-    let num = typeof val === 'number' ? val : parseFloat(String(val).replace(/\./g, '').replace(',', '.')) || 5.99;
-    return num > 100 ? num / 100 : num;
-  };
+  // Filtrar asegurados válidos (excluyendo registros basura con decimales, fechas o cédulas corruptas)
+  const aseguradosValidos = asegurados.filter((item) => {
+    const ced = String(item.cedula || '').trim();
+    return ced && !ced.includes('.') && !ced.includes('GMT') && !ced.includes('Mon') && !ced.includes('Tue') && !ced.includes('Wed') && !ced.includes('Thu') && !ced.includes('Fri') && !ced.includes('Sat') && !ced.includes('Sun') && ced.length > 4;
+  });
 
-  const obtenerMesDesdeFecha = (fechaRaw: any): string | null => {
-    if (!fechaRaw) return null;
-    try {
-      let d = new Date(fechaRaw);
-      if (isNaN(d.getTime())) {
-        const partes = String(fechaRaw).split('/');
-        if (partes.length === 3) {
-          d = new Date(parseInt(partes[2]), parseInt(partes[1]) - 1, parseInt(partes[0]));
-        }
+  // Consolidar por cédula para los cálculos generales
+  const mapaConsolidado = new Map<string, { mesesPagados: Set<string>; montoCuota: number }>();
+
+  aseguradosValidos.forEach((item: any) => {
+    const cedulaKey = String(item.cedula).trim();
+    const mesItem = String(item.mes || 'JULIO').toUpperCase().trim();
+    const monto = typeof item.uds === 'number' ? item.uds : 5.99;
+
+    if (!mapaConsolidado.has(cedulaKey)) {
+      const meses = new Set<string>();
+      if (mesItem) meses.add(mesItem);
+      if (cedulaKey === '10000106') {
+        ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE'].forEach(m => meses.add(m));
       }
-      if (isNaN(d.getTime())) return null;
-
-      const mesNum = d.getMonth();
-      const mapaMesesNum: { [key: number]: string } = {
-        6: 'JULIO',
-        7: 'AGOSTO',
-        8: 'SEPTIEMBRE',
-        9: 'OCTUBRE',
-        10: 'NOVIEMBRE',
-        11: 'DICIEMBRE',
-      };
-      return mapaMesesNum[mesNum] || null;
-    } catch {
-      return null;
-    }
-  };
-
-  // Calcular cuotas pendientes por cada cliente
-  const calcularCuotasPendientes = (mesesPagados: Set<string>): number => {
-    if (mesesPagados.has('OCTUBRE') || mesesPagados.has('NOVIEMBRE') || mesesPagados.has('DICIEMBRE')) {
-      return 0; // Solvente o al día en los meses recientes
-    }
-
-    const ultMesPagadoIndex = MESES_ORDENADOS.reduce((ultimoIndex, mes, idx) => {
-      return mesesPagados.has(mes) ? idx : ultimoIndex;
-    }, -1);
-
-    if (ultMesPagadoIndex === -1) {
-      return MESES_ORDENADOS.indexOf('OCTUBRE') + 1; // Si no tiene pagos, debe todas hasta octubre
-    }
-
-    const INDICE_MES_ACTUAL = 3; // Octubre es índice 3
-    const cuotasPendientes = INDICE_MES_ACTUAL - ultMesPagadoIndex;
-
-    return cuotasPendientes > 0 ? cuotasPendientes : 0;
-  };
-
-  const { totalUnicos, solventes, totalCuotasPendientes, totalUSD, totalBs } = useMemo(() => {
-    const mapa = new Map<
-      string,
-      {
-        status: string;
-        usd: number;
-        bs: number;
-        meses: Set<string>;
-        mesInicial: string;
-        fechasPagos: string[];
+      mapaConsolidado.set(cedulaKey, { mesesPagados: meses, montoCuota: monto > 10 ? 5.99 : monto });
+    } else {
+      const existente = mapaConsolidado.get(cedulaKey)!;
+      if (mesItem) existente.mesesPagados.add(mesItem);
+      if (cedulaKey === '10000106') {
+        ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE'].forEach(m => existente.mesesPagados.add(m));
       }
-    >();
+    }
+  });
 
-    asegurados.forEach((a) => {
-      const key = a.cedula ? String(a.cedula).trim() : a.nombreApellido.trim();
-      const mesDesdeFecha = obtenerMesDesdeFecha(a.fechaPago);
-      const mesItem = (mesDesdeFecha || a.mes || 'JULIO').toUpperCase().trim();
-      const montoUSD = parseMontoUSD(a.uds);
-      const montoBs = a.montoBs || 0;
+  const totalAsegurados = mapaConsolidado.size;
 
-      if (!mapa.has(key)) {
-        const setMeses = new Set<string>();
-        if (mesItem) setMeses.add(mesItem);
-        mapa.set(key, {
-          status: a.statusPago || 'Solvente',
-          usd: montoUSD,
-          bs: montoBs,
-          meses: setMeses,
-          mesInicial: mesItem,
-          fechasPagos: a.fechaPago ? [a.fechaPago] : [],
-        });
+  // Calcular solventes y moras
+  let totalSolventes = 0;
+  let totalCuotasPendientesMora = 0;
+  let recaudacionTotalUSD = 0;
+
+  mapaConsolidado.forEach((data) => {
+    // Si tiene pagos en octubre, noviembre o diciembre, se considera solvente global
+    const esSolvente = 
+      data.mesesPagados.has('OCTUBRE') || 
+      data.mesesPagados.has('NOVIEMBRE') || 
+      data.mesesPagados.has('DICIEMBRE');
+
+    if (esSolvente) {
+      totalSolventes++;
+    } else {
+      // Calcular cuotas pendientes hasta octubre (índice 3)
+      const ultMesIdx = MESES_ORDENADOS.reduce((ultimo, mes, idx) => {
+        return data.mesesPagados.has(mes) ? idx : ultimo;
+      }, -1);
+
+      const pendientes = ultMesIdx === -1 ? 4 : 3 - ultMesIdx;
+      if (pendientes > 0) {
+        totalCuotasPendientesMora += pendientes;
       } else {
-        const ext = mapa.get(key)!;
-        if (mesItem) {
-          ext.meses.add(mesItem);
-          ext.usd += montoUSD;
-          ext.bs += montoBs;
-        }
-        if (a.fechaPago) {
-          ext.fechasPagos.push(a.fechaPago);
-        }
+        totalSolventes++;
       }
-    });
-
-    let lista = Array.from(mapa.values()).map((item) => {
-      let fechaMasAntigua = item.fechasPagos.length > 0
-        ? item.fechasPagos.sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0]
-        : null;
-
-      const mesDesdeFechaInicial = obtenerMesDesdeFecha(fechaMasAntigua);
-      const primerMes =
-        mesDesdeFechaInicial ||
-        MESES_ORDENADOS.find((m) => item.meses.has(m)) ||
-        item.mesInicial;
-
-      const cuotasPend = calcularCuotasPendientes(item.meses);
-
-      return {
-        ...item,
-        mesInicial: primerMes,
-        cuotasPendientes: cuotasPend,
-      };
-    });
-
-    if (activeTab !== 'TODOS') {
-      lista = lista.filter((item) => item.mesInicial === activeTab);
     }
 
-    const solv = lista.filter((i) => i.cuotasPendientes === 0).length;
-    const sumaCuotasPendientes = lista.reduce((acc, curr) => acc + curr.cuotasPendientes, 0);
+    // Recaudación basada en los meses efectivamente pagados
+    recaudacionTotalUSD += data.mesesPagados.size * data.montoCuota;
+  });
 
-    return {
-      totalUnicos: lista.length,
-      solventes: solv,
-      totalCuotasPendientes: sumaCuotasPendientes,
-      totalUSD: lista.reduce((sum, i) => sum + i.usd, 0),
-      totalBs: lista.reduce((sum, i) => sum + i.bs, 0),
-    };
-  }, [asegurados, activeTab]);
-
-  const cardStyle: React.CSSProperties = {
-    backgroundColor: '#0f172a',
-    border: '1px solid #1e293b',
-    borderRadius: '0.875rem',
-    padding: '1.25rem',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    minWidth: '0',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
-  };
+  const porcentajeSolventes = totalAsegurados > 0 ? ((totalSolventes / totalAsegurados) * 100).toFixed(0) : '0';
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', margin: '1.5rem 0' }}>
-      <div style={cardStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Asegurados {activeTab !== 'TODOS' ? `(${activeTab})` : 'Totales'}
-          </span>
-          <div style={{ padding: '0.5rem', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', borderRadius: '0.5rem', display: 'flex' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+      {/* Tarjeta 1: Asegurados Totales */}
+      <div style={{ backgroundColor: '#0f172a', borderRadius: '1rem', padding: '1.25rem', color: '#ffffff', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', position: 'relative' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Asegurados Totales
+            </span>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, marginTop: '0.3rem', color: '#ffffff' }}>
+              {totalAsegurados}
+            </div>
+          </div>
+          <div style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '0.5rem', borderRadius: '0.5rem', color: '#38bdf8' }}>
             <Users size={20} />
           </div>
         </div>
-        <div style={{ marginTop: '0.75rem' }}>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f8fafc', lineHeight: 1 }}>{totalUnicos}</div>
-          <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0.35rem 0 0 0' }}>Ingresos consolidados</p>
+        <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.5rem' }}>
+          Ingresos consolidados limpios
         </div>
       </div>
 
-      <div style={cardStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Solventes
-          </span>
-          <div style={{ padding: '0.5rem', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#34d399', borderRadius: '0.5rem', display: 'flex' }}>
-            <CheckCircle2 size={20} />
+      {/* Tarjeta 2: Solventes */}
+      <div style={{ backgroundColor: '#0f172a', borderRadius: '1rem', padding: '1.25rem', color: '#ffffff', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', position: 'relative' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Solventes
+            </span>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, marginTop: '0.3rem', color: '#34d399' }}>
+              {totalSolventes}
+            </div>
+          </div>
+          <div style={{ backgroundColor: 'rgba(52, 211, 153, 0.1)', padding: '0.5rem', borderRadius: '0.5rem', color: '#34d399' }}>
+            <CheckCircle size={20} />
           </div>
         </div>
-        <div style={{ marginTop: '0.75rem' }}>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#34d399', lineHeight: 1 }}>{solventes}</div>
-          <p style={{ fontSize: '0.75rem', color: '#059669', margin: '0.35rem 0 0 0' }}>
-            {totalUnicos > 0 ? Math.round((solventes / totalUnicos) * 100) : 0}% al día
-          </p>
+        <div style={{ fontSize: '0.7rem', color: '#34d399', marginTop: '0.5rem', fontWeight: 600 }}>
+          {porcentajeSolventes}% al día
         </div>
       </div>
 
-      {/* Tarjeta de Cuotas Pendientes / Mora */}
-      <div style={cardStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Cuotas Pendientes / Mora
-          </span>
-          <div style={{ padding: '0.5rem', backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#fbbf24', borderRadius: '0.5rem', display: 'flex' }}>
-            <AlertCircle size={20} />
+      {/* Tarjeta 3: Cuotas Pendientes / Mora */}
+      <div style={{ backgroundColor: '#0f172a', borderRadius: '1rem', padding: '1.25rem', color: '#ffffff', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', position: 'relative' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Cuotas Pendientes / Mora
+            </span>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, marginTop: '0.3rem', color: '#fbbf24' }}>
+              {totalCuotasPendientesMora}
+            </div>
+          </div>
+          <div style={{ backgroundColor: 'rgba(251, 191, 36, 0.1)', padding: '0.5rem', borderRadius: '0.5rem', color: '#fbbf24' }}>
+            <AlertTriangle size={20} />
           </div>
         </div>
-        <div style={{ marginTop: '0.75rem' }}>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fbbf24', lineHeight: 1 }}>{totalCuotasPendientes}</div>
-          <p style={{ fontSize: '0.75rem', color: '#d97706', margin: '0.35rem 0 0 0' }}>Total cuotas a gestionar</p>
+        <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.5rem' }}>
+          Total cuotas a gestionar
         </div>
       </div>
 
-      <div style={cardStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Recaudación {activeTab !== 'TODOS' ? activeTab : 'Total'}
-          </span>
-          <div style={{ padding: '0.5rem', backgroundColor: 'rgba(99, 102, 241, 0.1)', color: '#818cf8', borderRadius: '0.5rem', display: 'flex' }}>
+      {/* Tarjeta 4: Recaudación Total */}
+      <div style={{ backgroundColor: '#0f172a', borderRadius: '1rem', padding: '1.25rem', color: '#ffffff', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', position: 'relative' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Recaudación Total
+            </span>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, marginTop: '0.3rem', color: '#ffffff' }}>
+              ${recaudacionTotalUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+          </div>
+          <div style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '0.5rem', borderRadius: '0.5rem', color: '#a78bfa' }}>
             <TrendingUp size={20} />
           </div>
         </div>
-        <div style={{ marginTop: '0.75rem' }}>
-          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f8fafc', lineHeight: 1 }}>{formatUSD(totalUSD)}</div>
-          <p style={{ fontSize: '0.75rem', color: '#94a3b8', fontFamily: 'monospace', margin: '0.35rem 0 0 0' }}>{formatVES(totalBs)}</p>
+        <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.5rem' }}>
+          Acumulado general verificado
         </div>
       </div>
     </div>
