@@ -61,30 +61,30 @@ export default function Home() {
         fontFamily: 'sans-serif',
         padding: '1rem'
       }}>
-        <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: '2.5rem', borderRadius: '1rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)', textAlign: 'center', width: '100%', maxWidth: '1200px', backdropFilter: 'blur(8px)' }}>
+        <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: '2rem 2.2rem', borderRadius: '1rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)', textAlign: 'center', width: '100%', maxWidth: '380px', backdropFilter: 'blur(8px)' }}>
           
-          <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ marginBottom: '1.2rem', display: 'flex', justifyContent: 'center' }}>
             <img 
               src="/logo2.png" 
               alt="Seguros Horizonte" 
-              style={{ width: '220px', height: 'auto', objectFit: 'contain' }} 
+              style={{ width: '180px', height: 'auto', objectFit: 'contain' }} 
             />
           </div>
 
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.25rem' }}>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.2rem' }}>
             Consolidado de Pagos y Cobranzas
           </h2>
-          <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '1.5rem' }}>
+          <p style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: '1.2rem' }}>
             Gestión Operativa • Business Intelligence
           </p>
 
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             <input
               type="text"
               placeholder="Usuario (Opcional)..."
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              style={{ padding: '0.7rem 1rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', outline: 'none', backgroundColor: '#f8fafc', color: '#0f172a', boxSizing: 'border-box', width: '100%' }}
+              style={{ padding: '0.6rem 0.9rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.8rem', outline: 'none', backgroundColor: '#f8fafc', color: '#0f172a', boxSizing: 'border-box', width: '100%' }}
             />
             <input
               type="password"
@@ -94,16 +94,16 @@ export default function Home() {
                 setPassword(e.target.value);
                 setError(false);
               }}
-              style={{ padding: '0.7rem 1rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', outline: 'none', backgroundColor: '#f8fafc', color: '#0f172a', boxSizing: 'border-box', width: '100%' }}
+              style={{ padding: '0.6rem 0.9rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.8rem', outline: 'none', backgroundColor: '#f8fafc', color: '#0f172a', boxSizing: 'border-box', width: '100%' }}
             />
             {error && (
-              <span style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: 600 }}>
                 {errorMsg}
               </span>
             )}
             <button
               type="submit"
-              style={{ backgroundColor: '#0284c7', color: '#ffffff', border: 'none', padding: '0.7rem', borderRadius: '0.5rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', marginTop: '0.5rem', boxShadow: '0 4px 6px -1px rgba(2, 132, 199, 0.3)' }}
+              style={{ backgroundColor: '#0284c7', color: '#ffffff', border: 'none', padding: '0.65rem', borderRadius: '0.5rem', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', marginTop: '0.3rem', boxShadow: '0 4px 6px -1px rgba(2, 132, 199, 0.3)' }}
             >
               Iniciar Sesión
             </button>
