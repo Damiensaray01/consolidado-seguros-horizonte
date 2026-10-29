@@ -23,6 +23,9 @@ export default function Home() {
   const [globalStatus, setGlobalStatus] = useState<string>('Todos');
   const [globalMonth, setGlobalMonth] = useState<string>('TODOS');
 
+  // Año actual automatizado para la interfaz corporativa
+  const currentYear = new Date().getFullYear();
+
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -97,30 +100,86 @@ export default function Home() {
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center', 
-        backgroundImage: 'linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.85)), url("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1920&q=80")',
+        backgroundImage: 'linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.9)), url("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1920&q=80")',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         fontFamily: 'sans-serif',
-        padding: '1rem'
+        padding: '1.5rem'
       }}>
-        <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: '2.5rem 2rem', borderRadius: '0.75rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)', width: '100%', maxWidth: '380px', backdropFilter: 'blur(8px)', textAlign: 'center' }}>
-          <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>Seguros Horizonte</h2>
-          <p style={{ margin: '0 0 1.5rem', fontSize: '0.75rem', color: '#64748b' }}>Gestión Operativa • Business Intelligence</p>
+        <div style={{ 
+          backgroundColor: 'rgba(255, 255, 255, 0.97)', 
+          padding: '2.5rem 2rem', 
+          borderRadius: '1rem', 
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)', 
+          width: '100%', 
+          maxWidth: '400px', 
+          backdropFilter: 'blur(10px)', 
+          textAlign: 'center',
+          border: '1px solid rgba(255, 255, 255, 0.2)'
+        }}>
           
-          <form onSubmit={(e) => { e.preventDefault(); if (username === 'ADMBiartet' && password === 'ADM2026') { setIsAuthenticated(true); setLoginError(false); } else { setLoginError(true); } }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
+          <h2 style={{ margin: '0 0 0.3rem', fontSize: '1.35rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.025em' }}>
+            Seguros Horizonte
+          </h2>
+          <p style={{ margin: '0 0 1.75rem', fontSize: '0.75rem', color: '#64748b', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Gestión Operativa
+          </p>
+          
+          <form onSubmit={(e) => { 
+            e.preventDefault(); 
+            if (username === 'ADMBiartet' && password === 'ADM2026') { 
+              setIsAuthenticated(true); 
+              setLoginError(false); 
+            } else { 
+              setLoginError(true); 
+            } 
+          }} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem', textAlign: 'left' }}>
+            
             <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>Usuario</label>
-              <input type="text" required value={username} onChange={e => setUsername(e.target.value)} style={{ width: '100%', padding: '0.55rem 0.7rem', borderRadius: '0.35rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', marginTop: '0.2rem', outline: 'none' }} />
+              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '0.3rem' }}>Usuario</label>
+              <input 
+                type="text" 
+                required 
+                placeholder="Ingrese su usuario"
+                value={username} 
+                onChange={e => setUsername(e.target.value)} 
+                style={{ width: '100%', padding: '0.65rem 0.8rem', borderRadius: '0.4rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', outline: 'none', backgroundColor: '#f8fafc', transition: 'border-color 0.2s' }} 
+              />
             </div>
+
             <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>Contraseña</label>
-              <input type="password" required value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', padding: '0.55rem 0.7rem', borderRadius: '0.35rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', marginTop: '0.2rem', outline: 'none' }} />
+              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '0.3rem' }}>Contraseña</label>
+              <input 
+                type="password" 
+                required 
+                placeholder="••••••••"
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+                style={{ width: '100%', padding: '0.65rem 0.8rem', borderRadius: '0.4rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', outline: 'none', backgroundColor: '#f8fafc', transition: 'border-color 0.2s' }} 
+              />
             </div>
-            {loginError && <p style={{ color: '#dc2626', fontSize: '0.75rem', margin: 0, textAlign: 'center' }}>Credenciales incorrectas.</p>}
-            <button type="submit" style={{ backgroundColor: '#0284c7', color: '#fff', border: 'none', padding: '0.65rem', borderRadius: '0.35rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', marginTop: '0.5rem' }}>
+
+            {loginError && (
+              <div style={{ backgroundColor: '#fee2e2', border: '1px solid #f87171', padding: '0.5rem', borderRadius: '0.3rem', textAlign: 'center' }}>
+                <p style={{ color: '#991b1b', fontSize: '0.75rem', margin: 0, fontWeight: 600 }}>Credenciales incorrectas.</p>
+              </div>
+            )}
+
+            <button 
+              type="submit" 
+              style={{ backgroundColor: '#0284c7', color: '#fff', border: 'none', padding: '0.75rem', borderRadius: '0.4rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', marginTop: '0.5rem', boxShadow: '0 4px 6px -1px rgba(2, 132, 199, 0.2)', transition: 'background-color 0.2s' }}
+            >
               Iniciar Sesión
             </button>
           </form>
+
+          {/* Business Intelligence dinámico con el año actual */}
+          <div style={{ marginTop: '2rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+            <p style={{ margin: 0, fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              Business Intelligence {currentYear}
+            </p>
+          </div>
+
         </div>
       </main>
     );
