@@ -152,39 +152,45 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
                 </td>
               </tr>
             ) : (
-              filteredAsegurados.map((item, index) => (
-                <tr key={item.id || index} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
-                  <td style={{ padding: '0.55rem 0.8rem', color: '#475569' }}>{item.fechaPago || '-'}</td>
-                  <td style={{ padding: '0.55rem 0.8rem', fontWeight: 600, color: '#0f172a' }}>{item.nombreApellido}</td>
-                  <td style={{ padding: '0.55rem 0.8rem', color: '#334155' }}>{item.cedula}</td>
-                  <td style={{ padding: '0.55rem 0.8rem', color: '#334155' }}>{item.telefono || '-'}</td>
-                  <td style={{ padding: '0.55rem 0.8rem', color: '#0284c7', fontWeight: 600 }}>${item.uds?.toFixed(2) || '5.99'}</td>
-                  <td style={{ padding: '0.55rem 0.8rem' }}>
-                    <span style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem', borderRadius: '0.2rem', border: '1px solid #cbd5e1', color: '#475569', backgroundColor: '#fff' }}>
-                      {item.banco || '-'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#0284c7', fontWeight: 600 }}>{item.mes === 'JULIO' ? '1' : '0'}</td>
-                  <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#0284c7', fontWeight: 600 }}>{item.mes === 'AGOSTO' ? '1' : '0'}</td>
-                  <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#0284c7', fontWeight: 600 }}>{item.mes === 'SEPTIEMBRE' ? '1' : '0'}</td>
-                  <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#0284c7', fontWeight: 600 }}>{item.mes === 'OCTUBRE' ? '1' : '0'}</td>
-                  <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#94a3b8' }}>0</td>
-                  <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#94a3b8' }}>0</td>
-                  <td style={{ padding: '0.55rem 0.8rem' }}>
-                    <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: '1rem', backgroundColor: '#dcfce7', color: '#166534', fontWeight: 600 }}>
-                      {item.estatus || 'Solvente'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center' }}>
-                    <button
-                      onClick={() => onSelectAsegurado(item)}
-                      style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '0.25rem 0.5rem', borderRadius: '0.3rem', fontSize: '0.7rem', fontWeight: 600, color: '#334155', cursor: 'pointer' }}
-                    >
-                      ✏️ Editar
-                    </button>
-                  </td>
-                </tr>
-              ))
+              filteredAsegurados.map((item, index) => {
+                // Formatear monto correctamente como 5,99
+                const rawUds = Number(item.uds) || 599;
+                const formattedUds = (rawUds > 50 ? rawUds / 100 : rawUds).toFixed(2).replace('.', ',');
+
+                return (
+                  <tr key={item.id || index} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
+                    <td style={{ padding: '0.55rem 0.8rem', color: '#475569' }}>{item.fechaPago || '-'}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', fontWeight: 600, color: '#0f172a' }}>{item.nombreApellido}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', color: '#334155' }}>{item.cedula}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', color: '#334155' }}>{item.telefono || '-'}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', color: '#0284c7', fontWeight: 600 }}>${formattedUds}</td>
+                    <td style={{ padding: '0.55rem 0.8rem' }}>
+                      <span style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem', borderRadius: '0.2rem', border: '1px solid #cbd5e1', color: '#475569', backgroundColor: '#fff' }}>
+                        {item.banco || '-'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.jul !== undefined ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.jul ?? 0}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.ago !== undefined ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.ago ?? 0}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.sep !== undefined ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.sep ?? 0}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.oct !== undefined ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.oct ?? 0}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#94a3b8' }}>{item.nov ?? 0}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#94a3b8' }}>{item.dic ?? 0}</td>
+                    <td style={{ padding: '0.55rem 0.8rem' }}>
+                      <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: '1rem', backgroundColor: '#dcfce7', color: '#166534', fontWeight: 600 }}>
+                        {item.estatus || 'Solvente'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center' }}>
+                      <button
+                        onClick={() => onSelectAsegurado(item)}
+                        style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '0.25rem 0.5rem', borderRadius: '0.3rem', fontSize: '0.7rem', fontWeight: 600, color: '#334155', cursor: 'pointer' }}
+                      >
+                        ✏️ Editar
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
