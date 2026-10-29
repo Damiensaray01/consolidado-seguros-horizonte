@@ -11,6 +11,8 @@
   estatus?: string;
   statusPago?: string;
   estatusCalculado?: string;
+  mesInicial?: string;
+  cuotasDebidas?: number;
   jul?: number | string;
   ago?: number | string;
   sep?: number | string;
