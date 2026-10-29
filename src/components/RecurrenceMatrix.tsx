@@ -7,6 +7,8 @@ interface RecurrenceMatrixProps {
   asegurados: Asegurado[];
   externalStatusFilter?: string;
   onStatusFilterChange?: (status: string) => void;
+  externalMonthFilter?: string;
+  onMonthFilterChange?: (month: string) => void;
   onSelectAsegurado: (asegurado: Asegurado) => void;
   onOpenNewRegistro: () => void;
 }
@@ -15,11 +17,13 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
   asegurados, 
   externalStatusFilter = 'Todos', 
   onStatusFilterChange, 
+  externalMonthFilter = 'TODOS',
+  onMonthFilterChange,
   onSelectAsegurado, 
   onOpenNewRegistro 
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState<string>('TODOS');
+  const [selectedMonth, setSelectedMonth] = useState<string>(externalMonthFilter);
   const [selectedStatus, setSelectedStatus] = useState<string>(externalStatusFilter);
   const [selectedBanco, setSelectedBanco] = useState<string>('TODOS');
 
@@ -27,9 +31,18 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
     setSelectedStatus(externalStatusFilter);
   }, [externalStatusFilter]);
 
+  useEffect(() => {
+    setSelectedMonth(externalMonthFilter);
+  }, [externalMonthFilter]);
+
   const handleStatusChange = (status: string) => {
     setSelectedStatus(status);
     if (onStatusFilterChange) onStatusFilterChange(status);
+  };
+
+  const handleMonthChange = (month: string) => {
+    setSelectedMonth(month);
+    if (onMonthFilterChange) onMonthFilterChange(month);
   };
 
   const consolidatedAsegurados = useMemo(() => {
@@ -184,7 +197,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
   return (
     <div style={{ width: '100%', fontFamily: 'sans-serif' }}>
       
-      {/* Pestañas de Meses y Acciones */}
+      {/* Pestañas de Meses e Iconos de Acción */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {[
@@ -196,7 +209,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
           ].map(tab => (
             <button
               key={tab.key}
-              onClick={() => setSelectedMonth(tab.key)}
+              onClick={() => handleMonthChange(tab.key)}
               style={{
                 padding: '0.4rem 0.8rem',
                 borderRadius: '0.4rem',

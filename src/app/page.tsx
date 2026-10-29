@@ -19,7 +19,9 @@ export default function Home() {
   const [asegurados, setAsegurados] = useState<Asegurado[]>([]);
   const [selectedAsegurado, setSelectedAsegurado] = useState<Asegurado | null>(null);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  
   const [globalStatus, setGlobalStatus] = useState<string>('Todos');
+  const [globalMonth, setGlobalMonth] = useState<string>('TODOS');
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -102,7 +104,6 @@ export default function Home() {
         padding: '1rem'
       }}>
         <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: '2.5rem 2rem', borderRadius: '0.75rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)', width: '100%', maxWidth: '380px', backdropFilter: 'blur(8px)', textAlign: 'center' }}>
-          
           <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>Seguros Horizonte</h2>
           <p style={{ margin: '0 0 1.5rem', fontSize: '0.75rem', color: '#64748b' }}>Gestión Operativa • Business Intelligence</p>
           
@@ -116,7 +117,7 @@ export default function Home() {
               <input type="password" required value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', padding: '0.55rem 0.7rem', borderRadius: '0.35rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', marginTop: '0.2rem', outline: 'none' }} />
             </div>
             {loginError && <p style={{ color: '#dc2626', fontSize: '0.75rem', margin: 0, textAlign: 'center' }}>Credenciales incorrectas.</p>}
-            <button type="submit" style={{ backgroundColor: '#0284c7', color: '#fff', border: 'none', padding: '0.65rem', borderRadius: '0.35rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', marginTop: '0.5rem', transition: 'background 0.2s' }}>
+            <button type="submit" style={{ backgroundColor: '#0284c7', color: '#fff', border: 'none', padding: '0.65rem', borderRadius: '0.35rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', marginTop: '0.5rem' }}>
               Iniciar Sesión
             </button>
           </form>
@@ -133,11 +134,14 @@ export default function Home() {
           asegurados={consolidatedAsegurados} 
           selectedStatus={globalStatus}
           onSelectStatus={(st) => setGlobalStatus(st)}
+          selectedMonth={globalMonth}
         />
         <RecurrenceMatrix 
           asegurados={asegurados} 
           externalStatusFilter={globalStatus}
           onStatusFilterChange={(st) => setGlobalStatus(st)}
+          externalMonthFilter={globalMonth}
+          onMonthFilterChange={(m) => setGlobalMonth(m)}
           onSelectAsegurado={(item) => setSelectedAsegurado(item)} 
           onOpenNewRegistro={() => setIsNewModalOpen(true)}
         />
