@@ -15,6 +15,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos');
   const [selectedBanco, setSelectedBanco] = useState<string>('TODOS');
 
+  // Consolidar y calcular estatus basado en la fecha inicial y el tiempo transcurrido hasta Octubre 2026
   const consolidatedAsegurados = useMemo(() => {
     const map = new Map<string, any>();
 
@@ -37,6 +38,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
           nov: 0,
           dic: 0,
           mesInicial: null,
+          primeraFecha: item.fechaPago || '',
           ultimaFecha: item.fechaPago || ''
         });
       }
@@ -59,15 +61,13 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       if (dicVal > 0) entry.dic = 1;
 
       const fecha = String(item.fechaPago || '');
+      if (fecha.includes('/6/2026') || fecha.startsWith('6/')) { /* mes inicial junio */ }
       if (fecha.includes('/7/2026') || fecha.startsWith('7/')) entry.jul = 1;
       if (fecha.includes('/8/2026') || fecha.startsWith('8/')) entry.ago = 1;
       if (fecha.includes('/9/2026') || fecha.startsWith('9/')) entry.sep = 1;
       if (fecha.includes('/10/2026') || fecha.startsWith('10/')) entry.oct = 1;
-      if (fecha.includes('/11/2026') || fecha.startsWith('11/')) entry.nov = 1;
-      if (fecha.includes('/12/2026') || fecha.startsWith('12/')) entry.dic = 1;
 
       if (item.fechaPago) {
-        entry.fechaPago = item.fechaPago;
         entry.ultimaFecha = item.fechaPago;
       }
       if (item.banco) entry.banco = item.banco;
@@ -75,14 +75,14 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
     });
 
     return Array.from(map.values()).map(client => {
+      // Determinar mes inicial cronológico
       let mesInicial = 'JULIO';
       if (client.jul === 1) mesInicial = 'JULIO';
       else if (client.ago === 1) mesInicial = 'AGOSTO';
       else if (client.sep === 1) mesInicial = 'SEPTIEMBRE';
       else if (client.oct === 1) mesInicial = 'OCTUBRE';
-      else if (client.nov === 1) mesInicial = 'NOVIEMBRE';
-      else if (client.dic === 1) mesInicial = 'DICIEMBRE';
 
+      // Evaluar cuotas debidas desde el mes inicial hasta Octubre 2026
       const mesesEvaluar = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE'];
       const startIndex = mesesEvaluar.indexOf(mesInicial);
       let cuotasDebidas = 0;
@@ -95,8 +95,11 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       }
 
       let estatusCalculado = 'Solvente';
-      if (cuotasDebidas === 1) estatusCalculado = 'Debe 1 Cuota';
-      else if (cuotasDebidas > 1) estatusCalculado = 'Debe + de 1 Cuota';
+      if (cuotasDebidas === 1) {
+        estatusCalculado = 'Debe 1 Cuota';
+      } else if (cuotasDebidas > 1) {
+        estatusCalculado = 'Debe + de 1 Cuota';
+      }
 
       return {
         ...client,
@@ -140,7 +143,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
     });
   }, [consolidatedAsegurados, searchTerm, selectedBanco, selectedStatus, selectedMonth]);
 
-  // Función para exportar a Excel / CSV
   const exportToExcel = () => {
     const headers = ['Fecha Ult. Pago', 'Nombre y Apellido', 'Cedula', 'Telefono', 'Cuota ($)', 'Banco', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic', 'Estatus'];
     const rows = filteredAsegurados.map(i => [
@@ -167,7 +169,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
   return (
     <div style={{ width: '100%', fontFamily: 'sans-serif' }}>
       
-      {/* Pestañas de Meses y Botones de Acción */}
+      {/* Pestañas de Meses y Acciones */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {[
@@ -220,7 +222,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
         </div>
       </div>
 
-      {/* Botones de Filtro de Estatus */}
+      {/* Filtros de Estatus */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', backgroundColor: '#ffffff', padding: '0.6rem 0.8rem', borderRadius: '0.4rem', border: '1px solid #e2e8f0' }}>
         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>Filtrar Estatus:</span>
         {['Todos', 'Solventes', 'Debe 1 Cuota', 'Debe + de 1 Cuota'].map(status => (
@@ -243,7 +245,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
         ))}
       </div>
 
-      {/* Buscador y Selector de Banco con BANFANB */}
+      {/* Buscador y Bancos con BANFANB */}
       <div style={{ backgroundColor: '#ffffff', padding: '0.8rem', borderRadius: '0.4rem', border: '1px solid #e2e8f0', marginBottom: '1.2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between' }}>
         <input
           type="text"
