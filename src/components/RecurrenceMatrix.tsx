@@ -18,7 +18,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
   const consolidatedAsegurados = useMemo(() => {
     const map = new Map<string, any>();
 
-    // Ordenar de más antiguo a más reciente para registrar correctamente el mes inicial y la última fecha
     const sortedItems = [...asegurados].sort((a, b) => {
       const fA = new Date(a.fechaPago?.split('/').reverse().join('-') || '').getTime() || 0;
       const fB = new Date(b.fechaPago?.split('/').reverse().join('-') || '').getTime() || 0;
@@ -45,13 +44,12 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       const entry = map.get(key)!;
       const itemAny = item as any;
 
-      // Acumular los pagos de los distintos documentos de Firebase
-      const julVal = Number(itemAny.cuotaJulio ?? (item.mes?.toUpperCase().includes('JULIO') ? 1 : 0) ?? (item.jul || 0));
-      const agoVal = Number(itemAny.cuotaAgosto ?? (item.mes?.toUpperCase().includes('AGOSTO') ? 1 : 0) ?? (item.ago || 0));
-      const sepVal = Number(itemAny.cuotaSeptiembre ?? (item.mes?.toUpperCase().includes('SEPTIEMBRE') ? 1 : 0) ?? (item.sep || 0));
-      const octVal = Number(itemAny.cuotaOctubre ?? (item.mes?.toUpperCase().includes('OCTUBRE') ? 1 : 0) ?? (item.oct || 0));
-      const novVal = Number(itemAny.cuotaNoviembre ?? (item.mes?.toUpperCase().includes('NOVIEMBRE') ? 1 : 0) ?? (item.nov || 0));
-      const dicVal = Number(itemAny.cuotaDiciembre ?? (item.mes?.toUpperCase().includes('DICIEMBRE') ? 1 : 0) ?? (item.dic || 0));
+      const julVal = Number(itemAny.cuotaJulio || (item.mes?.toUpperCase().includes('JULIO') ? 1 : 0) || (item.jul || 0));
+      const agoVal = Number(itemAny.cuotaAgosto || (item.mes?.toUpperCase().includes('AGOSTO') ? 1 : 0) || (item.ago || 0));
+      const sepVal = Number(itemAny.cuotaSeptiembre || (item.mes?.toUpperCase().includes('SEPTIEMBRE') ? 1 : 0) || (item.sep || 0));
+      const octVal = Number(itemAny.cuotaOctubre || (item.mes?.toUpperCase().includes('OCTUBRE') ? 1 : 0) || (item.oct || 0));
+      const novVal = Number(itemAny.cuotaNoviembre || (item.mes?.toUpperCase().includes('NOVIEMBRE') ? 1 : 0) || (item.nov || 0));
+      const dicVal = Number(itemAny.cuotaDiciembre || (item.mes?.toUpperCase().includes('DICIEMBRE') ? 1 : 0) || (item.dic || 0));
 
       if (julVal > 0) entry.jul = 1;
       if (agoVal > 0) entry.ago = 1;
@@ -60,7 +58,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       if (novVal > 0) entry.nov = 1;
       if (dicVal > 0) entry.dic = 1;
 
-      // Detección por fecha de pago si viene en formato DD/MM/YYYY
       const fecha = String(item.fechaPago || '');
       if (fecha.includes('/7/2026') || fecha.startsWith('7/')) entry.jul = 1;
       if (fecha.includes('/8/2026') || fecha.startsWith('8/')) entry.ago = 1;
@@ -69,7 +66,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       if (fecha.includes('/11/2026') || fecha.startsWith('11/')) entry.nov = 1;
       if (fecha.includes('/12/2026') || fecha.startsWith('12/')) entry.dic = 1;
 
-      // Actualizar siempre con la fecha más reciente para "Fecha Últ. Pago"
       if (item.fechaPago) {
         entry.fechaPago = item.fechaPago;
         entry.ultimaFecha = item.fechaPago;
@@ -78,7 +74,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       if (item.uds) entry.uds = item.uds;
     });
 
-    // Post-proceso para asignar el mes inicial cronológico y calcular estatus exacto
     return Array.from(map.values()).map(client => {
       let mesInicial = 'JULIO';
       if (client.jul === 1) mesInicial = 'JULIO';
@@ -88,7 +83,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       else if (client.nov === 1) mesInicial = 'NOVIEMBRE';
       else if (client.dic === 1) mesInicial = 'DICIEMBRE';
 
-      // Calcular cuotas faltantes hasta el mes actual (Octubre)
       const mesesEvaluar = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE'];
       const startIndex = mesesEvaluar.indexOf(mesInicial);
       let cuotasDebidas = 0;
@@ -112,7 +106,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
     });
   }, [asegurados]);
 
-  // Filtrado interactivo
   const filteredAsegurados = useMemo(() => {
     return consolidatedAsegurados.filter(item => {
       const nombre = item.nombreApellido ?? '';
