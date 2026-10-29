@@ -17,14 +17,6 @@ interface PaymentsTableProps {
 const MESES = ['TODOS', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE'];
 const MESES_ORDENADOS = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
-const CEDULAS_JULIO_FORZADAS = new Set([
-  '11200321', '25773821', '10001358', '14907686', '18093973',
-  '18501572', '18003787', '25847994', '27163228', '9609349',
-  '12174446', '14652892', '11931380', '7793727', '25894713',
-  '7662055', '11555269', '14652893', '14884967', '28443208',
-  '10000106', '5831725', '31217211', '32266111', '19228712'
-]);
-
 export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSelectAsegurado, onTabChange }) => {
   const [activeTab, setActiveTab] = useState('TODOS');
   const [searchTerm, setSearchTerm] = useState('');
@@ -69,33 +61,6 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     }
   };
 
-  const obtenerMesDesdeFecha = (fechaRaw: any): string | null => {
-    if (!fechaRaw) return null;
-    try {
-      let d = new Date(fechaRaw);
-      if (isNaN(d.getTime())) {
-        const partes = String(fechaRaw).split('/');
-        if (partes.length === 3) {
-          d = new Date(parseInt(partes[2]), parseInt(partes[1]) - 1, parseInt(partes[0]));
-        }
-      }
-      if (isNaN(d.getTime())) return null;
-
-      const mesNum = d.getMonth();
-      const mapaMesesNum: { [key: number]: string } = {
-        6: 'JULIO',
-        7: 'AGOSTO',
-        8: 'SEPTIEMBRE',
-        9: 'OCTUBRE',
-        10: 'NOVIEMBRE',
-        11: 'DICIEMBRE',
-      };
-      return mapaMesesNum[mesNum] || null;
-    } catch {
-      return null;
-    }
-  };
-
   const calcularEstatusDeuda = (item: any, mesesPagados: Set<string>) => {
     if (mesesPagados.has('OCTUBRE') || mesesPagados.has('NOVIEMBRE') || mesesPagados.has('DICIEMBRE')) {
       return 'Solvente';
@@ -121,7 +86,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     }
   };
 
-  // Consolidación de registros por Cédula asegurando que el mes inicial sea el primer pago cronológico
+  // Consolidación estricta por Cédula y asignación del primer mes cronológico pagado
   const aseguradosConsolidados = useMemo(() => {
     const mapa = new Map<
       string,
@@ -130,15 +95,13 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         montoCuotaReal: number;
         mesInicial: string;
         fechasPagos: string[];
-        cedulaTrim: string;
       }
     >();
 
     asegurados.forEach((item: any) => {
       const cedulaStr = item.cedula ? String(item.cedula).trim() : '';
       const cedulaKey = cedulaStr || item.nombreApellido.trim();
-      const mesDesdeFecha = obtenerMesDesdeFecha(item.fechaPago);
-      let mesItem = (mesDesdeFecha || item.mes || 'JULIO').toUpperCase().trim();
+      let mesItem = (item.mes || 'JULIO').toUpperCase().trim();
 
       const montoUSD = parseMontoUSD(item.uds);
 
@@ -149,7 +112,6 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         mapa.set(cedulaKey, {
           ...item,
           NUMERO: item.NUMERO || item.numero || item.telefono || '',
-          cedulaTrim: cedulaStr,
           mesesPagados: mesesAsignados,
           montoCuotaReal: montoUSD > 10 ? 5.99 : montoUSD,
           mesInicial: mesItem,
@@ -174,29 +136,12 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
 
     return Array.from(mapa.values())
       .map((item) => {
-        if (CEDULAS_JULIO_FORZADAS.has(item.cedulaTrim)) {
-          return { ...item, mesInicial: 'JULIO' };
-        }
-
-        // Encontrar la fecha más antigua registrada para este asegurado para fijar su mes inicial correcto
-        let mesAsignado = item.mesInicial;
-        if (item.fechasPagos.length > 0) {
-          const fechasOrdenadas = item.fechasPagos.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-          const mesAntiguo = obtenerMesDesdeFecha(fechasOrdenadas[0]);
-          if (mesAntiguo) {
-            mesAsignado = mesAntiguo;
-          }
-        } else {
-          // Si no hay fechas exactas, buscar el primer mes cronológico presente en sus meses pagados
-          const primerMesEncontrado = MESES_ORDENADOS.find((m) => item.mesesPagados.has(m));
-          if (primerMesEncontrado) {
-            mesAsignado = primerMesEncontrado;
-          }
-        }
+        // Encontrar estrictamente el primer mes cronológico en el que pagó (Julio > Agosto > Septiembre > Octubre)
+        const primerMesCronologico = MESES_ORDENADOS.find((m) => item.mesesPagados.has(m)) || 'JULIO';
 
         return {
           ...item,
-          mesInicial: mesAsignado,
+          mesInicial: primerMesCronologico,
         };
       })
       .sort((a, b) => {
