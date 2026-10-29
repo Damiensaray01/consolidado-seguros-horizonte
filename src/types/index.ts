@@ -10,6 +10,7 @@
   mes?: string;
   estatus?: string;
   statusPago?: string;
+  estatusCalculado?: string;
   jul?: number | string;
   ago?: number | string;
   sep?: number | string;
