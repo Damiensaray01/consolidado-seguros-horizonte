@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db } from '../../lib/firebase';
 import { PaymentsTable } from '../components/PaymentsTable';
 
 export default function Home() {
@@ -47,7 +47,6 @@ export default function Home() {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: 'sans-serif' }}>
         <div style={{ backgroundColor: '#ffffff', padding: '2.5rem', borderRadius: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', textAlign: 'center', width: '100%', maxWidth: '400px', border: '1px solid #e2e8f0' }}>
           
-          {/* Integraci√≥n del logotipo corporativo logo4 */}
           <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
             <img 
               src="/logo4.png" 
@@ -60,13 +59,13 @@ export default function Home() {
             Consolidado de Pagos y Cobranzas
           </h2>
           <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '1.5rem' }}>
-            Gesti√≥n Operativa ‚Ä¢ Business Intelligence
+            GestiÛn Operativa ï Business Intelligence
           </p>
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <input
               type="password"
-              placeholder="Ingrese la contrase√±a..."
+              placeholder="Ingrese la contraseÒa..."
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
@@ -76,14 +75,14 @@ export default function Home() {
             />
             {error && (
               <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: 600 }}>
-                Contrase√±a incorrecta. Intente nuevamente.
+                ContraseÒa incorrecta. Intente nuevamente.
               </span>
             )}
             <button
               type="submit"
               style={{ backgroundColor: '#0284c7', color: '#ffffff', border: 'none', padding: '0.6rem', borderRadius: '0.5rem', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
             >
-              Iniciar Sesi√≥n
+              Iniciar SesiÛn
             </button>
           </form>
         </div>
@@ -100,14 +99,14 @@ export default function Home() {
               Consolidado de Pagos Cobranzas - Seguros Horizonte
             </h1>
             <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.25rem 0 0 0' }}>
-              Business Intelligence 2026 ‚Ä¢ Gesti√≥n Operativa
+              Business Intelligence 2026 ï GestiÛn Operativa
             </p>
           </div>
           <button
             onClick={() => setIsLoggedIn(false)}
             style={{ backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', padding: '0.4rem 0.8rem', borderRadius: '0.5rem', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}
           >
-            Cerrar Sesi√≥n
+            Cerrar SesiÛn
           </button>
         </div>
 
