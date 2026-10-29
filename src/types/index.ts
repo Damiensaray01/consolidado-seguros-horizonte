@@ -16,5 +16,11 @@
   oct?: number | string;
   nov?: number | string;
   dic?: number | string;
+  cuotaJulio?: number | string;
+  cuotaAgosto?: number | string;
+  cuotaSeptiembre?: number | string;
+  cuotaOctubre?: number | string;
+  cuotaNoviembre?: number | string;
+  cuotaDiciembre?: number | string;
   imagenReferencia?: string;
 }

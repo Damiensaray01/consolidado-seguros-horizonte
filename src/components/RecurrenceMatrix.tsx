@@ -14,7 +14,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos');
   const [selectedBanco, setSelectedBanco] = useState<string>('TODOS');
 
-  // Consolidar clientes únicos por cédula agrupando sus cuotas de Firebase
+  // Consolidar registros para obtener clientes únicos y sumar sus cuotas mensuales
   const consolidatedAsegurados = useMemo(() => {
     const map = new Map<string, any>();
 
@@ -35,8 +35,9 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
 
       const entry = map.get(key)!;
 
-      // Mapear los campos reales de Firebase: cuotaJulio, cuotaAgosto, etc.
       const itemAny = item as any;
+      
+      // Asignar valores desde los campos de Firebase
       if (Number(itemAny.cuotaJulio) > 0 || Number(item.jul) > 0) entry.jul = Math.max(entry.jul, Number(itemAny.cuotaJulio || item.jul || 0));
       if (Number(itemAny.cuotaAgosto) > 0 || Number(item.ago) > 0) entry.ago = Math.max(entry.ago, Number(itemAny.cuotaAgosto || item.ago || 0));
       if (Number(itemAny.cuotaSeptiembre) > 0 || Number(item.sep) > 0) entry.sep = Math.max(entry.sep, Number(itemAny.cuotaSeptiembre || item.sep || 0));
@@ -44,7 +45,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       if (Number(itemAny.cuotaNoviembre) > 0 || Number(item.nov) > 0) entry.nov = Math.max(entry.nov, Number(itemAny.cuotaNoviembre || item.nov || 0));
       if (Number(itemAny.cuotaDiciembre) > 0 || Number(item.dic) > 0) entry.dic = Math.max(entry.dic, Number(itemAny.cuotaDiciembre || item.dic || 0));
 
-      // Detección secundaria por el campo 'mes' o 'fechaPago' si las cuotas vienen en 0
+      // Detección complementaria por fecha o nombre de mes
       const mesStr = String(item.mes || '').toUpperCase();
       const fecha = String(item.fechaPago || '');
       if (mesStr.includes('JULIO') || fecha.includes('/7/')) entry.jul = 1;
@@ -54,7 +55,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       if (mesStr.includes('NOVIEMBRE') || fecha.includes('/11/')) entry.nov = 1;
       if (mesStr.includes('DICIEMBRE') || fecha.includes('/12/')) entry.dic = 1;
 
-      // Mantener la información más reciente de fecha y estatus
       if (item.fechaPago) entry.fechaPago = item.fechaPago;
       if (item.estatus) entry.estatus = item.estatus;
     });
@@ -62,7 +62,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
     return Array.from(map.values());
   }, [asegurados]);
 
-  // Filtrado interactivo
+  // Filtrado general e interactivo
   const filteredAsegurados = useMemo(() => {
     return consolidatedAsegurados.filter(item => {
       const nombre = item.nombreApellido ?? '';
@@ -98,7 +98,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
   return (
     <div style={{ width: '100%', fontFamily: 'sans-serif' }}>
       
-      {/* Pestañas de Meses y Contadores */}
+      {/* Pestañas de Meses */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {[
@@ -143,7 +143,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
         </button>
       </div>
 
-      {/* Botones de Filtro de Estatus */}
+      {/* Filtros de Estatus */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', backgroundColor: '#ffffff', padding: '0.6rem 0.8rem', borderRadius: '0.4rem', border: '1px solid #e2e8f0' }}>
         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>Filtrar Estatus:</span>
         {['Todos', 'Solventes', 'Debe 1 Cuota', 'Debe + de 1 Cuota'].map(status => (
@@ -166,7 +166,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
         ))}
       </div>
 
-      {/* Barra de Búsqueda y Bancos */}
+      {/* Buscador y Bancos */}
       <div style={{ backgroundColor: '#ffffff', padding: '0.8rem', borderRadius: '0.4rem', border: '1px solid #e2e8f0', marginBottom: '1.2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between' }}>
         <input
           type="text"
@@ -186,7 +186,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
         </select>
       </div>
 
-      {/* Tabla Principal */}
+      {/* Tabla */}
       <div style={{ backgroundColor: '#ffffff', borderRadius: '0.4rem', border: '1px solid #e2e8f0', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
           <thead>
