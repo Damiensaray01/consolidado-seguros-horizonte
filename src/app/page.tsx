@@ -9,7 +9,7 @@ export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
-  const [asegurados, setAsegurados] = useState([]);
+  const [asegurados, setAsegurados] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
