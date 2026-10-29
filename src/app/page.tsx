@@ -67,7 +67,7 @@ export default function Home() {
             <img 
               src="/logo2.png" 
               alt="Seguros Horizonte" 
-              style={{ width: '160px', height: 'auto', objectFit: 'contain' }} 
+              style={{ width: '220px', height: 'auto', objectFit: 'contain' }} 
             />
           </div>
 
