@@ -213,7 +213,7 @@ export default function Home() {
         style={{
           position: 'fixed',
           inset: 0,
-          backgroundImage: 'url(/logo5.png)',
+          backgroundImage: 'url(/logo4.png)',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
           backgroundSize: 'cover',
