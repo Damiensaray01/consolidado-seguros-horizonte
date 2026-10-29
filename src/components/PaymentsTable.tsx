@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useMemo } from 'react';
 import { Asegurado } from '../types';
@@ -592,7 +592,6 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
               <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>NOV</th>
               <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>DIC</th>
               <th style={{ padding: '0.75rem 1rem' }}>ESTATUS</th>
-              <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>SOPORTE</th>
               <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>ACCIONES</th>
             </tr>
           </thead>
