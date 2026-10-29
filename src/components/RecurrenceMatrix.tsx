@@ -15,7 +15,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos');
   const [selectedBanco, setSelectedBanco] = useState<string>('TODOS');
 
-  // Consolidar y calcular estatus basado en la fecha inicial y el tiempo transcurrido hasta Octubre 2026
+  // Consolidar y calcular el número exacto de cuotas pendientes hasta la fecha actual (Octubre 2026)
   const consolidatedAsegurados = useMemo(() => {
     const map = new Map<string, any>();
 
@@ -38,7 +38,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
           nov: 0,
           dic: 0,
           mesInicial: null,
-          primeraFecha: item.fechaPago || '',
           ultimaFecha: item.fechaPago || ''
         });
       }
@@ -61,7 +60,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       if (dicVal > 0) entry.dic = 1;
 
       const fecha = String(item.fechaPago || '');
-      if (fecha.includes('/6/2026') || fecha.startsWith('6/')) { /* mes inicial junio */ }
       if (fecha.includes('/7/2026') || fecha.startsWith('7/')) entry.jul = 1;
       if (fecha.includes('/8/2026') || fecha.startsWith('8/')) entry.ago = 1;
       if (fecha.includes('/9/2026') || fecha.startsWith('9/')) entry.sep = 1;
@@ -75,14 +73,12 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
     });
 
     return Array.from(map.values()).map(client => {
-      // Determinar mes inicial cronológico
       let mesInicial = 'JULIO';
       if (client.jul === 1) mesInicial = 'JULIO';
       else if (client.ago === 1) mesInicial = 'AGOSTO';
       else if (client.sep === 1) mesInicial = 'SEPTIEMBRE';
       else if (client.oct === 1) mesInicial = 'OCTUBRE';
 
-      // Evaluar cuotas debidas desde el mes inicial hasta Octubre 2026
       const mesesEvaluar = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE'];
       const startIndex = mesesEvaluar.indexOf(mesInicial);
       let cuotasDebidas = 0;
@@ -98,13 +94,14 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       if (cuotasDebidas === 1) {
         estatusCalculado = 'Debe 1 Cuota';
       } else if (cuotasDebidas > 1) {
-        estatusCalculado = 'Debe + de 1 Cuota';
+        estatusCalculado = `Debe ${cuotasDebidas} Cuotas`;
       }
 
       return {
         ...client,
         mesInicial,
-        estatusCalculado
+        estatusCalculado,
+        cuotasDebidas
       };
     });
   }, [asegurados]);
@@ -127,9 +124,13 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       }
       
       let matchStatus = true;
-      if (selectedStatus === 'Solventes') matchStatus = item.estatusCalculado === 'Solvente';
-      else if (selectedStatus === 'Debe 1 Cuota') matchStatus = item.estatusCalculado === 'Debe 1 Cuota';
-      else if (selectedStatus === 'Debe + de 1 Cuota') matchStatus = item.estatusCalculado === 'Debe + de 1 Cuota';
+      if (selectedStatus === 'Solventes') {
+        matchStatus = item.estatusCalculado === 'Solvente';
+      } else if (selectedStatus === 'Debe 1 Cuota') {
+        matchStatus = item.estatusCalculado === 'Debe 1 Cuota';
+      } else if (selectedStatus === 'Debe + de 1 Cuota') {
+        matchStatus = item.cuotasDebidas > 1;
+      }
 
       let matchMonth = true;
       if (selectedMonth === 'JULIO') matchMonth = item.mesInicial === 'JULIO';
