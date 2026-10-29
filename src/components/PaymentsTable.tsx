@@ -40,10 +40,10 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {[
             { key: 'TODOS', label: 'TODOS', count: asegurados.length },
-            { key: 'JULIO', label: 'JULIO', count: 52 },
-            { key: 'AGOSTO', label: 'AGOSTO', count: 102 },
-            { key: 'SEPTIEMBRE', label: 'SEPTIEMBRE', count: 156 },
-            { key: 'OCTUBRE', label: 'OCTUBRE', count: 101 },
+            { key: 'JULIO', label: 'JULIO', count: asegurados.filter(i => i.mes === 'JULIO').length },
+            { key: 'AGOSTO', label: 'AGOSTO', count: asegurados.filter(i => i.mes === 'AGOSTO').length },
+            { key: 'SEPTIEMBRE', label: 'SEPTIEMBRE', count: asegurados.filter(i => i.mes === 'SEPTIEMBRE').length },
+            { key: 'OCTUBRE', label: 'OCTUBRE', count: asegurados.filter(i => i.mes === 'OCTUBRE').length },
             { key: 'NOVIEMBRE', label: 'NOVIEMBRE', count: 0 },
             { key: 'DICIEMBRE', label: 'DICIEMBRE', count: 0 },
           ].map(tab => (
@@ -157,22 +157,22 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
                   <td style={{ padding: '0.55rem 0.8rem', color: '#475569' }}>{item.fechaPago || '-'}</td>
                   <td style={{ padding: '0.55rem 0.8rem', fontWeight: 600, color: '#0f172a' }}>{item.nombreApellido}</td>
                   <td style={{ padding: '0.55rem 0.8rem', color: '#334155' }}>{item.cedula}</td>
-                  <td style={{ padding: '0.55rem 0.8rem', color: '#334155' }}>{item.telefono || '0412-0000000'}</td>
+                  <td style={{ padding: '0.55rem 0.8rem', color: '#334155' }}>{item.telefono || '-'}</td>
                   <td style={{ padding: '0.55rem 0.8rem', color: '#0284c7', fontWeight: 600 }}>${item.uds?.toFixed(2) || '5.99'}</td>
                   <td style={{ padding: '0.55rem 0.8rem' }}>
                     <span style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem', borderRadius: '0.2rem', border: '1px solid #cbd5e1', color: '#475569', backgroundColor: '#fff' }}>
-                      {item.banco || 'BANCO PLAZA'}
+                      {item.banco || '-'}
                     </span>
                   </td>
-                  <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#0284c7', fontWeight: 600 }}>1</td>
-                  <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#0284c7', fontWeight: 600 }}>1</td>
-                  <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#0284c7', fontWeight: 600 }}>1</td>
-                  <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#0284c7', fontWeight: 600 }}>1</td>
+                  <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#0284c7', fontWeight: 600 }}>{item.mes === 'JULIO' ? '1' : '0'}</td>
+                  <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#0284c7', fontWeight: 600 }}>{item.mes === 'AGOSTO' ? '1' : '0'}</td>
+                  <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#0284c7', fontWeight: 600 }}>{item.mes === 'SEPTIEMBRE' ? '1' : '0'}</td>
+                  <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#0284c7', fontWeight: 600 }}>{item.mes === 'OCTUBRE' ? '1' : '0'}</td>
                   <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#94a3b8' }}>0</td>
                   <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#94a3b8' }}>0</td>
                   <td style={{ padding: '0.55rem 0.8rem' }}>
                     <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: '1rem', backgroundColor: '#dcfce7', color: '#166534', fontWeight: 600 }}>
-                      Solvente
+                      {item.estatus || 'Solvente'}
                     </span>
                   </td>
                   <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center' }}>
