@@ -1,9 +1,9 @@
-import './globals.css';
 import type { Metadata } from 'next';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Consolidado de Pagos - Seguros Horizonte',
-  description: 'Gestión y control de cobranzas Banco Plaza - Banesco',
+  title: 'Consolidado Seguros Horizonte',
+  description: 'Gestión Operativa de Cobranzas 2026',
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className="bg-slate-950 text-slate-100 min-h-screen antialiased">
+      <body style={{ margin: 0, padding: 0, backgroundColor: '#f8fafc', color: '#0f172a' }}>
         {children}
       </body>
     </html>

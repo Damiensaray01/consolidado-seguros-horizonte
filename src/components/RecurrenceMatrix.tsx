@@ -14,7 +14,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos');
   const [selectedBanco, setSelectedBanco] = useState<string>('TODOS');
 
-  // Consolidar registros para obtener clientes únicos y sumar sus cuotas mensuales
+  // Consolidación de clientes únicos por cédula mapeando cuotaJulio, cuotaAgosto, etc.
   const consolidatedAsegurados = useMemo(() => {
     const map = new Map<string, any>();
 
@@ -34,35 +34,38 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       }
 
       const entry = map.get(key)!;
-
       const itemAny = item as any;
-      
-      // Asignar valores desde los campos de Firebase
-      if (Number(itemAny.cuotaJulio) > 0 || Number(item.jul) > 0) entry.jul = Math.max(entry.jul, Number(itemAny.cuotaJulio || item.jul || 0));
-      if (Number(itemAny.cuotaAgosto) > 0 || Number(item.ago) > 0) entry.ago = Math.max(entry.ago, Number(itemAny.cuotaAgosto || item.ago || 0));
-      if (Number(itemAny.cuotaSeptiembre) > 0 || Number(item.sep) > 0) entry.sep = Math.max(entry.sep, Number(itemAny.cuotaSeptiembre || item.sep || 0));
-      if (Number(itemAny.cuotaOctubre) > 0 || Number(item.oct) > 0) entry.oct = Math.max(entry.oct, Number(itemAny.cuotaOctubre || item.oct || 0));
-      if (Number(itemAny.cuotaNoviembre) > 0 || Number(item.nov) > 0) entry.nov = Math.max(entry.nov, Number(itemAny.cuotaNoviembre || item.nov || 0));
-      if (Number(itemAny.cuotaDiciembre) > 0 || Number(item.dic) > 0) entry.dic = Math.max(entry.dic, Number(itemAny.cuotaDiciembre || item.dic || 0));
 
-      // Detección complementaria por fecha o nombre de mes
+      const julVal = Number(itemAny.cuotaJulio ?? item.jul ?? 0);
+      const agoVal = Number(itemAny.cuotaAgosto ?? item.ago ?? 0);
+      const sepVal = Number(itemAny.cuotaSeptiembre ?? item.sep ?? 0);
+      const octVal = Number(itemAny.cuotaOctubre ?? item.oct ?? 0);
+      const novVal = Number(itemAny.cuotaNoviembre ?? item.nov ?? 0);
+      const dicVal = Number(itemAny.cuotaDiciembre ?? item.dic ?? 0);
+
+      if (julVal > 0) entry.jul = Math.max(entry.jul, julVal);
+      if (agoVal > 0) entry.ago = Math.max(entry.ago, agoVal);
+      if (sepVal > 0) entry.sep = Math.max(entry.sep, sepVal);
+      if (octVal > 0) entry.oct = Math.max(entry.oct, octVal);
+      if (novVal > 0) entry.nov = Math.max(entry.nov, novVal);
+      if (dicVal > 0) entry.dic = Math.max(entry.dic, dicVal);
+
       const mesStr = String(item.mes || '').toUpperCase();
       const fecha = String(item.fechaPago || '');
-      if (mesStr.includes('JULIO') || fecha.includes('/7/')) entry.jul = 1;
-      if (mesStr.includes('AGOSTO') || fecha.includes('/8/')) entry.ago = 1;
-      if (mesStr.includes('SEPTIEMBRE') || fecha.includes('/9/')) entry.sep = 1;
-      if (mesStr.includes('OCTUBRE') || fecha.includes('/10/')) entry.oct = 1;
-      if (mesStr.includes('NOVIEMBRE') || fecha.includes('/11/')) entry.nov = 1;
-      if (mesStr.includes('DICIEMBRE') || fecha.includes('/12/')) entry.dic = 1;
+      if (mesStr.includes('JULIO') || fecha.includes('/7/')) entry.jul = entry.jul || 1;
+      if (mesStr.includes('AGOSTO') || fecha.includes('/8/')) entry.ago = entry.ago || 1;
+      if (mesStr.includes('SEPTIEMBRE') || fecha.includes('/9/')) entry.sep = entry.sep || 1;
+      if (mesStr.includes('OCTUBRE') || fecha.includes('/10/')) entry.oct = entry.oct || 1;
+      if (mesStr.includes('NOVIEMBRE') || fecha.includes('/11/')) entry.nov = entry.nov || 1;
+      if (mesStr.includes('DICIEMBRE') || fecha.includes('/12/')) entry.dic = entry.dic || 1;
 
       if (item.fechaPago) entry.fechaPago = item.fechaPago;
-      if (item.estatus) entry.estatus = item.estatus;
+      if (item.estatus || item.statusPago) entry.estatus = item.estatus || item.statusPago;
     });
 
     return Array.from(map.values());
   }, [asegurados]);
 
-  // Filtrado general e interactivo
   const filteredAsegurados = useMemo(() => {
     return consolidatedAsegurados.filter(item => {
       const nombre = item.nombreApellido ?? '';
@@ -79,7 +82,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       
       const estatusItem = item.estatus ?? '';
       const matchStatus = selectedStatus === 'Todos' || 
-        (selectedStatus === 'Solventes' && estatusItem === 'Solvente') ||
+        (selectedStatus === 'Solventes' && estatusItem.toLowerCase().includes('solvente')) ||
         (selectedStatus === 'Debe 1 Cuota' && estatusItem.includes('1 cuota')) ||
         (selectedStatus === 'Debe + de 1 Cuota' && estatusItem.includes('de 1 cuota'));
 
@@ -98,7 +101,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
   return (
     <div style={{ width: '100%', fontFamily: 'sans-serif' }}>
       
-      {/* Pestañas de Meses */}
+      {/* Pestañas de Meses Superior */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {[
@@ -166,7 +169,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
         ))}
       </div>
 
-      {/* Buscador y Bancos */}
+      {/* Buscador */}
       <div style={{ backgroundColor: '#ffffff', padding: '0.8rem', borderRadius: '0.4rem', border: '1px solid #e2e8f0', marginBottom: '1.2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between' }}>
         <input
           type="text"
@@ -186,7 +189,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
         </select>
       </div>
 
-      {/* Tabla */}
+      {/* Tabla Principal */}
       <div style={{ backgroundColor: '#ffffff', borderRadius: '0.4rem', border: '1px solid #e2e8f0', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
           <thead>

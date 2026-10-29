@@ -1,144 +1,44 @@
 ﻿'use client';
 
-import React, { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { PaymentsTable } from '@/components/PaymentsTable';
+import { Asegurado } from '@/types';
+import { Header } from '@/components/Header';
+import { RecurrenceMatrix } from '@/components/RecurrenceMatrix';
+import { ReceiptModal } from '@/components/ReceiptModal';
 
 export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [asegurados, setAsegurados] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [asegurados, setAsegurados] = useState<Asegurado[]>([]);
+  const [selectedAsegurado, setSelectedAsegurado] = useState<Asegurado | null>(null);
 
   useEffect(() => {
-    if (isLoggedIn) {
-      const fetchData = async () => {
-        try {
-          const querySnapshot = await getDocs(collection(db, 'consolidado_pagos'));
-          const data = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-          setAsegurados(data);
-        } catch (err) {
-          console.error('Error al cargar datos:', err);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchData();
-    }
-  }, [isLoggedIn]);
+    // Escuchar la colección principal en Firestore: consolidado_pagos
+    const unsubscribe = onSnapshot(collection(db, 'consolidado_pagos'), (snapshot) => {
+      const data: Asegurado[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setAsegurados(data);
+    });
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    const validPass = password.trim() === 'ADM2026';
-
-    if (validPass) {
-      setIsLoggedIn(true);
-      setError(false);
-    } else {
-      setError(true);
-      setErrorMsg('Contraseña incorrecta. Intente nuevamente.');
-    }
-  };
-
-  if (!isLoggedIn) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        minHeight: '100vh', 
-        backgroundImage: 'linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.75)), url("/logo4.png")',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        fontFamily: 'sans-serif',
-        padding: '1rem'
-      }}>
-        <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: '2rem 2.2rem', borderRadius: '1rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)', textAlign: 'center', width: '100%', maxWidth: '380px', backdropFilter: 'blur(8px)' }}>
-          
-          <div style={{ marginBottom: '1.2rem', display: 'flex', justifyContent: 'center' }}>
-            <img 
-              src="/logo2.png" 
-              alt="Seguros Horizonte" 
-              style={{ width: '180px', height: 'auto', objectFit: 'contain' }} 
-            />
-          </div>
-
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.2rem' }}>
-            Consolidado de Pagos y Cobranzas
-          </h2>
-          <p style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: '1.2rem' }}>
-            Gestión Operativa • Business Intelligence
-          </p>
-
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            <input
-              type="text"
-              placeholder="Usuario (Opcional)..."
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              style={{ padding: '0.6rem 0.9rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.8rem', outline: 'none', backgroundColor: '#f8fafc', color: '#0f172a', boxSizing: 'border-box', width: '100%' }}
-            />
-            <input
-              type="password"
-              placeholder="Contraseña..."
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setError(false);
-              }}
-              style={{ padding: '0.6rem 0.9rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.8rem', outline: 'none', backgroundColor: '#f8fafc', color: '#0f172a', boxSizing: 'border-box', width: '100%' }}
-            />
-            {error && (
-              <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: 600 }}>
-                {errorMsg}
-              </span>
-            )}
-            <button
-              type="submit"
-              style={{ backgroundColor: '#0284c7', color: '#ffffff', border: 'none', padding: '0.65rem', borderRadius: '0.5rem', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', marginTop: '0.3rem', boxShadow: '0 4px 6px -1px rgba(2, 132, 199, 0.3)' }}
-            >
-              Iniciar Sesión
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
+    return () => unsubscribe();
+  }, []);
 
   return (
-    <main style={{ padding: '1.5rem 2rem', backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'sans-serif', width: '100%', boxSizing: 'border-box' }}>
-      <div style={{ width: '100%', maxWidth: '100%', margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-              Consolidado de Pagos Cobranzas - Seguros Horizonte
-            </h1>
-            <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.25rem 0 0 0' }}>
-              Business Intelligence 2026 • Gestión Operativa
-            </p>
-          </div>
-          <button
-            onClick={() => setIsLoggedIn(false)}
-            style={{ backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', padding: '0.4rem 0.8rem', borderRadius: '0.5rem', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}
-          >
-            Cerrar Sesión
-          </button>
-        </div>
-
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>Cargando datos del sistema...</div>
-        ) : (
-          <PaymentsTable asegurados={asegurados} onSelectAsegurado={() => {}} />
-        )}
+    <main style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+      <Header />
+      <div style={{ padding: '1.5rem', maxWidth: '1400px', margin: '0 auto' }}>
+        <RecurrenceMatrix 
+          asegurados={asegurados} 
+          onSelectAsegurado={(item) => setSelectedAsegurado(item)} 
+        />
       </div>
+
+      <ReceiptModal 
+        asegurado={selectedAsegurado} 
+        onClose={() => setSelectedAsegurado(null)} 
+      />
     </main>
   );
 }
