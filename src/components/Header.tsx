@@ -2,7 +2,11 @@
 
 import React from 'react';
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  onLogout?: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({ onLogout }) => {
   return (
     <header style={{ backgroundColor: '#ffffff', padding: '1rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <div>
@@ -14,6 +18,7 @@ export const Header: React.FC = () => {
         </p>
       </div>
       <button 
+        onClick={onLogout}
         style={{ backgroundColor: '#fee2e2', color: '#991b1b', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '0.375rem', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}
       >
         Cerrar Sesión

@@ -6,15 +6,15 @@ import { Asegurado } from '@/types';
 interface RecurrenceMatrixProps {
   asegurados: Asegurado[];
   onSelectAsegurado: (asegurado: Asegurado) => void;
+  onOpenNewRegistro: () => void;
 }
 
-export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, onSelectAsegurado }) => {
+export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, onSelectAsegurado, onOpenNewRegistro }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string>('TODOS');
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos');
   const [selectedBanco, setSelectedBanco] = useState<string>('TODOS');
 
-  // Consolidar todos los registros por Cédula para unificar el historial de cada cliente
   const consolidatedAsegurados = useMemo(() => {
     const map = new Map<string, any>();
 
@@ -117,8 +117,11 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
         cedula.includes(searchTerm) ||
         telefono.includes(searchTerm);
 
-      const bancoItem = item.banco ?? '';
-      const matchBanco = selectedBanco === 'TODOS' || bancoItem.toUpperCase() === selectedBanco.toUpperCase();
+      const bancoItem = (item.banco ?? '').toUpperCase().trim();
+      let matchBanco = true;
+      if (selectedBanco !== 'TODOS') {
+        matchBanco = bancoItem === selectedBanco.toUpperCase();
+      }
       
       let matchStatus = true;
       if (selectedStatus === 'Solventes') matchStatus = item.estatusCalculado === 'Solvente';
@@ -137,10 +140,34 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
     });
   }, [consolidatedAsegurados, searchTerm, selectedBanco, selectedStatus, selectedMonth]);
 
+  // Función para exportar a Excel / CSV
+  const exportToExcel = () => {
+    const headers = ['Fecha Ult. Pago', 'Nombre y Apellido', 'Cedula', 'Telefono', 'Cuota ($)', 'Banco', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic', 'Estatus'];
+    const rows = filteredAsegurados.map(i => [
+      i.fechaPago || '',
+      `"${i.nombreApellido || ''}"`,
+      i.cedula || '',
+      i.telefono || '',
+      Number(i.uds || 599) > 50 ? Number(i.uds)/100 : Number(i.uds || 5.99),
+      `"${i.banco || ''}"`,
+      i.jul, i.ago, i.sep, i.oct, i.nov, i.dic,
+      `"${i.estatusCalculado}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'Consolidado_Seguros_Horizonte.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div style={{ width: '100%', fontFamily: 'sans-serif' }}>
       
-      {/* Pestañas de Meses Iniciales */}
+      {/* Pestañas de Meses y Botones de Acción */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {[
@@ -177,12 +204,20 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
           ))}
         </div>
 
-        <button
-          onClick={() => {}}
-          style={{ backgroundColor: '#0284c7', color: '#ffffff', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '0.4rem', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}
-        >
-          + Nuevo Registro
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            onClick={exportToExcel}
+            style={{ backgroundColor: '#16a34a', color: '#ffffff', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '0.4rem', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}
+          >
+            📊 Descargar Excel
+          </button>
+          <button
+            onClick={onOpenNewRegistro}
+            style={{ backgroundColor: '#0284c7', color: '#ffffff', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '0.4rem', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}
+          >
+            + Nuevo Registro
+          </button>
+        </div>
       </div>
 
       {/* Botones de Filtro de Estatus */}
@@ -208,7 +243,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
         ))}
       </div>
 
-      {/* Buscador y Bancos */}
+      {/* Buscador y Selector de Banco con BANFANB */}
       <div style={{ backgroundColor: '#ffffff', padding: '0.8rem', borderRadius: '0.4rem', border: '1px solid #e2e8f0', marginBottom: '1.2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between' }}>
         <input
           type="text"
@@ -220,11 +255,12 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
         <select
           value={selectedBanco}
           onChange={(e) => setSelectedBanco(e.target.value)}
-          style={{ padding: '0.45rem 0.7rem', borderRadius: '0.3rem', border: '1px solid #cbd5e1', fontSize: '0.8rem', backgroundColor: '#fff', cursor: 'pointer' }}
+          style={{ padding: '0.45rem 0.7rem', borderRadius: '0.3rem', border: '1px solid #cbd5e1', fontSize: '0.8rem', backgroundColor: '#fff', cursor: 'pointer', minWidth: '160px' }}
         >
           <option value="TODOS">Todos los Bancos</option>
           <option value="BANCO PLAZA">Banco Plaza</option>
           <option value="BANESCO">Banesco</option>
+          <option value="BANFANB">BANFANB</option>
         </select>
       </div>
 
@@ -234,11 +270,11 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
           <thead>
             <tr style={{ backgroundColor: '#0f172a', color: '#ffffff', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.05em' }}>
               <th style={{ padding: '0.6rem 0.8rem' }}>Fecha Últ. Pago</th>
-              <th style={{ padding: '0.6rem 0.8rem', width: '26%' }}>Nombre y Apellido</th>
+              <th style={{ padding: '0.6rem 0.8rem', width: '24%' }}>Nombre y Apellido</th>
               <th style={{ padding: '0.6rem 0.8rem' }}>Cédula</th>
               <th style={{ padding: '0.6rem 0.8rem' }}>Teléfono</th>
               <th style={{ padding: '0.6rem 0.8rem' }}>Cuota ($)</th>
-              <th style={{ padding: '0.6rem 0.8rem' }}>Banco</th>
+              <th style={{ padding: '0.6rem 0.8rem', minWidth: '120px' }}>Banco</th>
               <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Jul</th>
               <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Ago</th>
               <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Sep</th>
@@ -264,13 +300,13 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
 
                 return (
                   <tr key={item.id || index} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
-                    <td style={{ padding: '0.55rem 0.8rem', color: '#475569' }}>{item.fechaPago || '-'}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', color: '#475569', whiteSpace: 'nowrap' }}>{item.fechaPago || '-'}</td>
                     <td style={{ padding: '0.55rem 0.8rem', fontWeight: 600, color: '#0f172a' }}>{item.nombreApellido || '-'}</td>
-                    <td style={{ padding: '0.55rem 0.8rem', color: '#334155' }}>{item.cedula || '-'}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', color: '#334155', whiteSpace: 'nowrap' }}>{item.cedula || '-'}</td>
                     <td style={{ padding: '0.55rem 0.8rem', color: '#334155' }}>{item.telefono || '-'}</td>
-                    <td style={{ padding: '0.55rem 0.8rem', color: '#0284c7', fontWeight: 600 }}>${formattedUds}</td>
-                    <td style={{ padding: '0.55rem 0.8rem' }}>
-                      <span style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem', borderRadius: '0.2rem', border: '1px solid #cbd5e1', color: '#475569', backgroundColor: '#fff' }}>
+                    <td style={{ padding: '0.55rem 0.8rem', color: '#0284c7', fontWeight: 600, whiteSpace: 'nowrap' }}>${formattedUds}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.4rem', borderRadius: '0.2rem', border: '1px solid #cbd5e1', color: '#475569', backgroundColor: '#fff', display: 'inline-block' }}>
                         {item.banco || '-'}
                       </span>
                     </td>
@@ -280,19 +316,20 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
                     <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.oct > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.oct}</td>
                     <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.nov > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.nov}</td>
                     <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.dic > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.dic}</td>
-                    <td style={{ padding: '0.55rem 0.8rem' }}>
+                    <td style={{ padding: '0.55rem 0.8rem', whiteSpace: 'nowrap' }}>
                       <span style={{
                         fontSize: '0.65rem',
                         padding: '0.2rem 0.5rem',
                         borderRadius: '1rem',
                         fontWeight: 600,
                         backgroundColor: isSolvente ? '#dcfce7' : '#fef3c7',
-                        color: isSolvente ? '#166534' : '#92400e'
+                        color: isSolvente ? '#166534' : '#92400e',
+                        display: 'inline-block'
                       }}>
                         {item.estatusCalculado}
                       </span>
                     </td>
-                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center' }}>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
                       <button
                         onClick={() => onSelectAsegurado(item)}
                         style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '0.25rem 0.5rem', borderRadius: '0.3rem', fontSize: '0.7rem', fontWeight: 600, color: '#334155', cursor: 'pointer' }}
