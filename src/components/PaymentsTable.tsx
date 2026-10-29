@@ -13,7 +13,6 @@ interface PaymentsTableProps {
   onTabChange?: (tab: string) => void;
 }
 
-// Pestañas de meses activos limitadas hasta Octubre
 const MESES = ['TODOS', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE'];
 const MESES_ORDENADOS = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
@@ -86,14 +85,14 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     }
   };
 
-  // Consolidación estricta por Cédula y asignación del primer mes cronológico pagado
+  // Consolidación de registros por Cédula
   const aseguradosConsolidados = useMemo(() => {
     const mapa = new Map<
       string,
       Asegurado & {
         mesesPagados: Set<string>;
         montoCuotaReal: number;
-        mesInicial: string;
+        primerMesPagado: string;
         fechasPagos: string[];
       }
     >();
@@ -114,7 +113,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
           NUMERO: item.NUMERO || item.numero || item.telefono || '',
           mesesPagados: mesesAsignados,
           montoCuotaReal: montoUSD > 10 ? 5.99 : montoUSD,
-          mesInicial: mesItem,
+          primerMesPagado: '',
           fechasPagos: item.fechaPago ? [item.fechaPago] : [],
         });
       } else {
@@ -136,12 +135,12 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
 
     return Array.from(mapa.values())
       .map((item) => {
-        // Encontrar estrictamente el primer mes cronológico en el que pagó (Julio > Agosto > Septiembre > Octubre)
-        const primerMesCronologico = MESES_ORDENADOS.find((m) => item.mesesPagados.has(m)) || 'JULIO';
+        // Encontrar estrictamente el primer mes cronológico en el que este usuario tiene un pago registrado
+        const primerMesReal = MESES_ORDENADOS.find((m) => item.mesesPagados.has(m)) || 'JULIO';
 
         return {
           ...item,
-          mesInicial: primerMesCronologico,
+          primerMesPagado: primerMesReal,
         };
       })
       .sort((a, b) => {
@@ -162,7 +161,8 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
   }, [asegurados]);
 
   const filteredData = aseguradosConsolidados.filter((item) => {
-    const matchesMes = activeTab === 'TODOS' || item.mesInicial === activeTab;
+    // Filtrado estricto por la pestaña activa utilizando el primer mes real pagado
+    const matchesMes = activeTab === 'TODOS' || item.primerMesPagado === activeTab;
 
     const query = searchTerm.toLowerCase();
     const telLimpio = formatTelefono(item).toLowerCase();
@@ -195,7 +195,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
       NUMERO: formatTelefono(item),
       'CUOTA ($)': `$${item.montoCuotaReal.toFixed(2)}`,
       BANCO: item.banco,
-      'MES DE ORIGEN': item.mesInicial,
+      'MES DE ORIGEN': item.primerMesPagado,
       JULIO: item.mesesPagados.has('JULIO') ? 1 : 0,
       AGOSTO: item.mesesPagados.has('AGOSTO') ? 1 : 0,
       SEPTIEMBRE: item.mesesPagados.has('SEPTIEMBRE') ? 1 : 0,
@@ -262,7 +262,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
       cedula: item.cedula || '',
       NUMERO: telExtraido !== '-' ? telExtraido : (item.NUMERO || ''),
       banco: item.banco || 'BANCO PLAZA',
-      mes: item.mesInicial || item.mes || 'JULIO',
+      mes: item.primerMesPagado || item.mes || 'JULIO',
       uds: item.montoCuotaReal || item.uds || 5.99,
       fechaPago: item.fechaPago || new Date().toISOString().split('T')[0],
     });
@@ -344,7 +344,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
       }}
     >
-      {/* Pestañas de Meses Activos */}
+      {/* Pestañas de Meses Activos con conteo exacto por primer mes pagado */}
       <div
         style={{
           display: 'flex',
@@ -363,7 +363,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
             const count =
               mes === 'TODOS'
                 ? aseguradosConsolidados.length
-                : aseguradosConsolidados.filter((a) => a.mesInicial === mes).length;
+                : aseguradosConsolidados.filter((a) => a.primerMesPagado === mes).length;
 
             return (
               <button
