@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
-import { db } from './lib/firebase';
+import { db } from '../lib/firebase'; // <-- Corregido aquí con '../'
 import { PaymentsTable } from '../components/PaymentsTable';
 
 export default function Home() {
