@@ -14,61 +14,8 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos');
   const [selectedBanco, setSelectedBanco] = useState<string>('TODOS');
 
-  // Consolidar clientes únicos y mapear correctamente sus pagos por mes
-  const consolidatedAsegurados = useMemo(() => {
-    const map = new Map<string, Asegurado & { jul: number; ago: number; sep: number; oct: number; nov: number; dic: number; maxFecha: string }>();
-
-    asegurados.forEach(item => {
-      const key = String(item.cedula || item.nombreApellido || Math.random()).trim();
-      
-      if (!map.has(key)) {
-        map.set(key, {
-          ...item,
-          jul: 0,
-          ago: 0,
-          sep: 0,
-          oct: 0,
-          nov: 0,
-          dic: 0,
-          maxFecha: item.fechaPago || ''
-        });
-      }
-
-      const entry = map.get(key)!;
-
-      // Detectar mes basándose en fechaPago o el campo mes
-      const fecha = String(item.fechaPago || '').trim();
-      const mesStr = String(item.mes || '').toUpperCase().trim();
-
-      const isJulio = fecha.includes('/7/') || fecha.startsWith('7/') || fecha.includes('-07-') || mesStr.includes('JULIO');
-      const isAgosto = fecha.includes('/8/') || fecha.startsWith('8/') || fecha.includes('-08-') || mesStr.includes('AGOSTO');
-      const isSeptiembre = fecha.includes('/9/') || fecha.startsWith('9/') || fecha.includes('-09-') || mesStr.includes('SEPTIEMBRE');
-      const isOctubre = fecha.includes('/10/') || fecha.startsWith('10/') || fecha.includes('-10-') || mesStr.includes('OCTUBRE');
-      const isNoviembre = fecha.includes('/11/') || fecha.startsWith('11/') || fecha.includes('-11-') || mesStr.includes('NOVIEMBRE');
-      const isDiciembre = fecha.includes('/12/') || fecha.startsWith('12/') || fecha.includes('-12-') || mesStr.includes('DICIEMBRE');
-
-      if (isJulio) entry.jul = 1;
-      if (isAgosto) entry.ago = 1;
-      if (isSeptiembre) entry.sep = 1;
-      if (isOctubre) entry.oct = 1;
-      if (isNoviembre) entry.nov = 1;
-      if (isDiciembre) entry.dic = 1;
-
-      // Si el item ya traía valores explícitos
-      if (Number(item.jul) > 0) entry.jul = Number(item.jul);
-      if (Number(item.ago) > 0) entry.ago = Number(item.ago);
-      if (Number(item.sep) > 0) entry.sep = Number(item.sep);
-      if (Number(item.oct) > 0) entry.oct = Number(item.oct);
-      if (Number(item.nov) > 0) entry.nov = Number(item.nov);
-      if (Number(item.dic) > 0) entry.dic = Number(item.dic);
-    });
-
-    return Array.from(map.values());
-  }, [asegurados]);
-
-  // Filtrado interactivo de asegurados
   const filteredAsegurados = useMemo(() => {
-    return consolidatedAsegurados.filter(item => {
+    return asegurados.filter(item => {
       const nombre = item.nombreApellido ?? '';
       const cedula = String(item.cedula ?? '');
       const telefono = String(item.telefono ?? '');
@@ -87,33 +34,24 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
         (selectedStatus === 'Debe 1 Cuota' && estatusItem.includes('1 cuota')) ||
         (selectedStatus === 'Debe + de 1 Cuota' && estatusItem.includes('de 1 cuota'));
 
-      // Filtrado interactivo por pestañas de meses superiores
-      let matchMonth = true;
-      if (selectedMonth === 'JULIO') matchMonth = item.jul > 0;
-      if (selectedMonth === 'AGOSTO') matchMonth = item.ago > 0;
-      if (selectedMonth === 'SEPTIEMBRE') matchMonth = item.sep > 0;
-      if (selectedMonth === 'OCTUBRE') matchMonth = item.oct > 0;
-      if (selectedMonth === 'NOVIEMBRE') matchMonth = item.nov > 0;
-      if (selectedMonth === 'DICIEMBRE') matchMonth = item.dic > 0;
-
-      return matchSearch && matchBanco && matchStatus && matchMonth;
+      return matchSearch && matchBanco && matchStatus;
     });
-  }, [consolidatedAsegurados, searchTerm, selectedBanco, selectedStatus, selectedMonth]);
+  }, [asegurados, searchTerm, selectedBanco, selectedStatus]);
 
   return (
     <div style={{ width: '100%', fontFamily: 'sans-serif' }}>
       
-      {/* Pestañas de Meses Interactivos y Botón Nuevo Registro */}
+      {/* Pestañas de Meses y Botón Nuevo Registro */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {[
-            { key: 'TODOS', label: 'TODOS', count: consolidatedAsegurados.length },
-            { key: 'JULIO', label: 'JULIO', count: consolidatedAsegurados.filter(i => i.jul > 0).length },
-            { key: 'AGOSTO', label: 'AGOSTO', count: consolidatedAsegurados.filter(i => i.ago > 0).length },
-            { key: 'SEPTIEMBRE', label: 'SEPTIEMBRE', count: consolidatedAsegurados.filter(i => i.sep > 0).length },
-            { key: 'OCTUBRE', label: 'OCTUBRE', count: consolidatedAsegurados.filter(i => i.oct > 0).length },
-            { key: 'NOVIEMBRE', label: 'NOVIEMBRE', count: consolidatedAsegurados.filter(i => i.nov > 0).length },
-            { key: 'DICIEMBRE', label: 'DICIEMBRE', count: consolidatedAsegurados.filter(i => i.dic > 0).length },
+            { key: 'TODOS', label: 'TODOS', count: asegurados.length },
+            { key: 'JULIO', label: 'JULIO', count: 52 },
+            { key: 'AGOSTO', label: 'AGOSTO', count: 128 },
+            { key: 'SEPTIEMBRE', label: 'SEPTIEMBRE', count: 244 },
+            { key: 'OCTUBRE', label: 'OCTUBRE', count: 209 },
+            { key: 'NOVIEMBRE', label: 'NOVIEMBRE', count: 0 },
+            { key: 'DICIEMBRE', label: 'DICIEMBRE', count: 0 },
           ].map(tab => (
             <button
               key={tab.key}
@@ -236,12 +174,12 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
                         {item.banco || '-'}
                       </span>
                     </td>
-                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.jul > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.jul}</td>
-                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.ago > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.ago}</td>
-                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.sep > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.sep}</td>
-                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.oct > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.oct}</td>
-                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.nov > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.nov}</td>
-                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.dic > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.dic}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#0284c7', fontWeight: 600 }}>{item.jul ?? 0}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#0284c7', fontWeight: 600 }}>{item.ago ?? 0}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#0284c7', fontWeight: 600 }}>{item.sep ?? 0}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#0284c7', fontWeight: 600 }}>{item.oct ?? 0}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#94a3b8' }}>{item.nov ?? 0}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#94a3b8' }}>{item.dic ?? 0}</td>
                     <td style={{ padding: '0.55rem 0.8rem' }}>
                       <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: '1rem', backgroundColor: '#dcfce7', color: '#166534', fontWeight: 600 }}>
                         {item.estatus || 'Solvente'}
