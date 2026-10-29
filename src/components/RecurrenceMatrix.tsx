@@ -14,11 +14,18 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos');
   const [selectedBanco, setSelectedBanco] = useState<string>('TODOS');
 
-  // 1. Consolidación de clientes únicos por Cédula con cálculo dinámico de estatus
+  // Consolidar todos los registros por Cédula para unificar el historial de cada cliente
   const consolidatedAsegurados = useMemo(() => {
     const map = new Map<string, any>();
 
-    asegurados.forEach(item => {
+    // Ordenar de más antiguo a más reciente para registrar correctamente el mes inicial y la última fecha
+    const sortedItems = [...asegurados].sort((a, b) => {
+      const fA = new Date(a.fechaPago?.split('/').reverse().join('-') || '').getTime() || 0;
+      const fB = new Date(b.fechaPago?.split('/').reverse().join('-') || '').getTime() || 0;
+      return fA - fB;
+    });
+
+    sortedItems.forEach(item => {
       const key = String(item.cedula || item.nombreApellido || Math.random()).trim();
       
       if (!map.has(key)) {
@@ -30,19 +37,21 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
           oct: 0,
           nov: 0,
           dic: 0,
+          mesInicial: null,
+          ultimaFecha: item.fechaPago || ''
         });
       }
 
       const entry = map.get(key)!;
       const itemAny = item as any;
 
-      // Evaluar cuotas registradas en Firestore
-      const julVal = Number(itemAny.cuotaJulio ?? item.jul ?? 0);
-      const agoVal = Number(itemAny.cuotaAgosto ?? item.ago ?? 0);
-      const sepVal = Number(itemAny.cuotaSeptiembre ?? item.sep ?? 0);
-      const octVal = Number(itemAny.cuotaOctubre ?? item.oct ?? 0);
-      const novVal = Number(itemAny.cuotaNoviembre ?? item.nov ?? 0);
-      const dicVal = Number(itemAny.cuotaDiciembre ?? item.dic ?? 0);
+      // Acumular los pagos de los distintos documentos de Firebase
+      const julVal = Number(itemAny.cuotaJulio ?? (item.mes?.toUpperCase().includes('JULIO') ? 1 : 0) ?? (item.jul || 0));
+      const agoVal = Number(itemAny.cuotaAgosto ?? (item.mes?.toUpperCase().includes('AGOSTO') ? 1 : 0) ?? (item.ago || 0));
+      const sepVal = Number(itemAny.cuotaSeptiembre ?? (item.mes?.toUpperCase().includes('SEPTIEMBRE') ? 1 : 0) ?? (item.sep || 0));
+      const octVal = Number(itemAny.cuotaOctubre ?? (item.mes?.toUpperCase().includes('OCTUBRE') ? 1 : 0) ?? (item.oct || 0));
+      const novVal = Number(itemAny.cuotaNoviembre ?? (item.mes?.toUpperCase().includes('NOVIEMBRE') ? 1 : 0) ?? (item.nov || 0));
+      const dicVal = Number(itemAny.cuotaDiciembre ?? (item.mes?.toUpperCase().includes('DICIEMBRE') ? 1 : 0) ?? (item.dic || 0));
 
       if (julVal > 0) entry.jul = 1;
       if (agoVal > 0) entry.ago = 1;
@@ -51,25 +60,26 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       if (novVal > 0) entry.nov = 1;
       if (dicVal > 0) entry.dic = 1;
 
-      // Respaldo por texto del mes o fecha
-      const mesStr = String(item.mes || '').toUpperCase();
+      // Detección por fecha de pago si viene en formato DD/MM/YYYY
       const fecha = String(item.fechaPago || '');
-      if (mesStr.includes('JULIO') || fecha.includes('/7/')) entry.jul = 1;
-      if (mesStr.includes('AGOSTO') || fecha.includes('/8/')) entry.ago = 1;
-      if (mesStr.includes('SEPTIEMBRE') || fecha.includes('/9/')) entry.sep = 1;
-      if (mesStr.includes('OCTUBRE') || fecha.includes('/10/')) entry.oct = 1;
-      if (mesStr.includes('NOVIEMBRE') || fecha.includes('/11/')) entry.nov = 1;
-      if (mesStr.includes('DICIEMBRE') || fecha.includes('/12/')) entry.dic = 1;
+      if (fecha.includes('/7/2026') || fecha.startsWith('7/')) entry.jul = 1;
+      if (fecha.includes('/8/2026') || fecha.startsWith('8/')) entry.ago = 1;
+      if (fecha.includes('/9/2026') || fecha.startsWith('9/')) entry.sep = 1;
+      if (fecha.includes('/10/2026') || fecha.startsWith('10/')) entry.oct = 1;
+      if (fecha.includes('/11/2026') || fecha.startsWith('11/')) entry.nov = 1;
+      if (fecha.includes('/12/2026') || fecha.startsWith('12/')) entry.dic = 1;
 
-      if (item.fechaPago) entry.fechaPago = item.fechaPago;
+      // Actualizar siempre con la fecha más reciente para "Fecha Últ. Pago"
+      if (item.fechaPago) {
+        entry.fechaPago = item.fechaPago;
+        entry.ultimaFecha = item.fechaPago;
+      }
       if (item.banco) entry.banco = item.banco;
+      if (item.uds) entry.uds = item.uds;
     });
 
-    // Calcular mes inicial y estatus dinámico para cada cliente
-    const list = Array.from(map.values());
-
-    return list.map(client => {
-      // Determinar mes inicial (el primer mes que tenga un 1 registrado)
+    // Post-proceso para asignar el mes inicial cronológico y calcular estatus exacto
+    return Array.from(map.values()).map(client => {
       let mesInicial = 'JULIO';
       if (client.jul === 1) mesInicial = 'JULIO';
       else if (client.ago === 1) mesInicial = 'AGOSTO';
@@ -78,27 +88,21 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       else if (client.nov === 1) mesInicial = 'NOVIEMBRE';
       else if (client.dic === 1) mesInicial = 'DICIEMBRE';
 
-      // Calcular deuda real acumulada hasta Octubre (mes actual activo)
-      // Evaluamos desde su mes inicial cuántas cuotas le faltan por pagar
+      // Calcular cuotas faltantes hasta el mes actual (Octubre)
       const mesesEvaluar = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE'];
       const startIndex = mesesEvaluar.indexOf(mesInicial);
-
       let cuotasDebidas = 0;
+
       if (startIndex !== -1) {
         const valores = [client.jul, client.ago, client.sep, client.oct];
         for (let i = startIndex; i < valores.length; i++) {
-          if (valores[i] === 0) {
-            cuotasDebidas++;
-          }
+          if (valores[i] === 0) cuotasDebidas++;
         }
       }
 
       let estatusCalculado = 'Solvente';
-      if (cuotasDebidas === 1) {
-        estatusCalculado = 'Debe 1 Cuota';
-      } else if (cuotasDebidas > 1) {
-        estatusCalculado = 'Debe + de 1 Cuota';
-      }
+      if (cuotasDebidas === 1) estatusCalculado = 'Debe 1 Cuota';
+      else if (cuotasDebidas > 1) estatusCalculado = 'Debe + de 1 Cuota';
 
       return {
         ...client,
@@ -108,7 +112,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
     });
   }, [asegurados]);
 
-  // 2. Filtrado dinámico interactivo
+  // Filtrado interactivo
   const filteredAsegurados = useMemo(() => {
     return consolidatedAsegurados.filter(item => {
       const nombre = item.nombreApellido ?? '';
@@ -123,24 +127,18 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       const bancoItem = item.banco ?? '';
       const matchBanco = selectedBanco === 'TODOS' || bancoItem.toUpperCase() === selectedBanco.toUpperCase();
       
-      // Filtrar según el estatus calculado
       let matchStatus = true;
-      if (selectedStatus === 'Solventes') {
-        matchStatus = item.estatusCalculado === 'Solvente';
-      } else if (selectedStatus === 'Debe 1 Cuota') {
-        matchStatus = item.estatusCalculado === 'Debe 1 Cuota';
-      } else if (selectedStatus === 'Debe + de 1 Cuota') {
-        matchStatus = item.estatusCalculado === 'Debe + de 1 Cuota';
-      }
+      if (selectedStatus === 'Solventes') matchStatus = item.estatusCalculado === 'Solvente';
+      else if (selectedStatus === 'Debe 1 Cuota') matchStatus = item.estatusCalculado === 'Debe 1 Cuota';
+      else if (selectedStatus === 'Debe + de 1 Cuota') matchStatus = item.estatusCalculado === 'Debe + de 1 Cuota';
 
-      // Filtrar por pestaña de mes (por mes inicial o cuota activa)
       let matchMonth = true;
-      if (selectedMonth === 'JULIO') matchMonth = item.mesInicial === 'JULIO' || item.jul > 0;
-      if (selectedMonth === 'AGOSTO') matchMonth = item.mesInicial === 'AGOSTO' || item.ago > 0;
-      if (selectedMonth === 'SEPTIEMBRE') matchMonth = item.mesInicial === 'SEPTIEMBRE' || item.sep > 0;
-      if (selectedMonth === 'OCTUBRE') matchMonth = item.mesInicial === 'OCTUBRE' || item.oct > 0;
-      if (selectedMonth === 'NOVIEMBRE') matchMonth = item.mesInicial === 'NOVIEMBRE' || item.nov > 0;
-      if (selectedMonth === 'DICIEMBRE') matchMonth = item.mesInicial === 'DICIEMBRE' || item.dic > 0;
+      if (selectedMonth === 'JULIO') matchMonth = item.mesInicial === 'JULIO';
+      if (selectedMonth === 'AGOSTO') matchMonth = item.mesInicial === 'AGOSTO';
+      if (selectedMonth === 'SEPTIEMBRE') matchMonth = item.mesInicial === 'SEPTIEMBRE';
+      if (selectedMonth === 'OCTUBRE') matchMonth = item.mesInicial === 'OCTUBRE';
+      if (selectedMonth === 'NOVIEMBRE') matchMonth = item.mesInicial === 'NOVIEMBRE';
+      if (selectedMonth === 'DICIEMBRE') matchMonth = item.mesInicial === 'DICIEMBRE';
 
       return matchSearch && matchBanco && matchStatus && matchMonth;
     });
@@ -149,17 +147,17 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
   return (
     <div style={{ width: '100%', fontFamily: 'sans-serif' }}>
       
-      {/* Pestañas de Meses */}
+      {/* Pestañas de Meses Iniciales */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {[
             { key: 'TODOS', label: 'TODOS', count: consolidatedAsegurados.length },
-            { key: 'JULIO', label: 'JULIO', count: consolidatedAsegurados.filter(i => i.mesInicial === 'JULIO' || i.jul > 0).length },
-            { key: 'AGOSTO', label: 'AGOSTO', count: consolidatedAsegurados.filter(i => i.mesInicial === 'AGOSTO' || i.ago > 0).length },
-            { key: 'SEPTIEMBRE', label: 'SEPTIEMBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'SEPTIEMBRE' || i.sep > 0).length },
-            { key: 'OCTUBRE', label: 'OCTUBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'OCTUBRE' || i.oct > 0).length },
-            { key: 'NOVIEMBRE', label: 'NOVIEMBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'NOVIEMBRE' || i.nov > 0).length },
-            { key: 'DICIEMBRE', label: 'DICIEMBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'DICIEMBRE' || i.dic > 0).length },
+            { key: 'JULIO', label: 'JULIO', count: consolidatedAsegurados.filter(i => i.mesInicial === 'JULIO').length },
+            { key: 'AGOSTO', label: 'AGOSTO', count: consolidatedAsegurados.filter(i => i.mesInicial === 'AGOSTO').length },
+            { key: 'SEPTIEMBRE', label: 'SEPTIEMBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'SEPTIEMBRE').length },
+            { key: 'OCTUBRE', label: 'OCTUBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'OCTUBRE').length },
+            { key: 'NOVIEMBRE', label: 'NOVIEMBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'NOVIEMBRE').length },
+            { key: 'DICIEMBRE', label: 'DICIEMBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'DICIEMBRE').length },
           ].map(tab => (
             <button
               key={tab.key}
@@ -197,32 +195,27 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       {/* Botones de Filtro de Estatus */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', backgroundColor: '#ffffff', padding: '0.6rem 0.8rem', borderRadius: '0.4rem', border: '1px solid #e2e8f0' }}>
         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>Filtrar Estatus:</span>
-        {[
-          { key: 'Todos', label: 'Todos' },
-          { key: 'Solventes', label: 'Solventes' },
-          { key: 'Debe 1 Cuota', label: 'Debe 1 Cuota' },
-          { key: 'Debe + de 1 Cuota', label: 'Debe + de 1 Cuota' }
-        ].map(status => (
+        {['Todos', 'Solventes', 'Debe 1 Cuota', 'Debe + de 1 Cuota'].map(status => (
           <button
-            key={status.key}
-            onClick={() => setSelectedStatus(status.key)}
+            key={status}
+            onClick={() => setSelectedStatus(status)}
             style={{
               padding: '0.3rem 0.6rem',
               borderRadius: '999px',
               border: 'none',
-              backgroundColor: selectedStatus === status.key ? '#0284c7' : '#f1f5f9',
-              color: selectedStatus === status.key ? '#ffffff' : '#475569',
+              backgroundColor: selectedStatus === status ? '#0284c7' : '#f1f5f9',
+              color: selectedStatus === status ? '#ffffff' : '#475569',
               fontWeight: 600,
               fontSize: '0.7rem',
               cursor: 'pointer'
             }}
           >
-            {status.label}
+            {status}
           </button>
         ))}
       </div>
 
-      {/* Buscador y Selección de Banco */}
+      {/* Buscador y Bancos */}
       <div style={{ backgroundColor: '#ffffff', padding: '0.8rem', borderRadius: '0.4rem', border: '1px solid #e2e8f0', marginBottom: '1.2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between' }}>
         <input
           type="text"
@@ -274,7 +267,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
               filteredAsegurados.map((item, index) => {
                 const rawUds = Number(item.uds) || 599;
                 const formattedUds = (rawUds > 50 ? rawUds / 100 : rawUds).toFixed(2).replace('.', ',');
-
                 const isSolvente = item.estatusCalculado === 'Solvente';
 
                 return (
