@@ -36,7 +36,6 @@ export default function Home() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Contraseña actualizada a ADM2026
     const validPass = password.trim() === 'ADM2026';
 
     if (validPass) {
@@ -56,7 +55,7 @@ export default function Home() {
         alignItems: 'center', 
         justifyContent: 'center', 
         minHeight: '100vh', 
-        backgroundImage: 'linear-gradient(rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.7)), url("/logo5.png")',
+        backgroundImage: 'linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.75)), url("/logo4.png")',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         fontFamily: 'sans-serif',
@@ -66,7 +65,7 @@ export default function Home() {
           
           <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
             <img 
-              src="/logo4.png" 
+              src="/logo2.png" 
               alt="Seguros Horizonte" 
               style={{ width: '160px', height: 'auto', objectFit: 'contain' }} 
             />
