@@ -1,476 +1,205 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import { Asegurado } from '../types';
-import { formatUSD } from '../lib/utils';
-import { Layers, BarChart3 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Asegurado } from '@/types';
 
 interface RecurrenceMatrixProps {
   asegurados: Asegurado[];
+  onSelectAsegurado: (asegurado: Asegurado) => void;
 }
 
-const MESES = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-const MESES_ORDENADOS = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, onSelectAsegurado }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState<string>('TODOS');
+  const [selectedStatus, setSelectedStatus] = useState<string>('Todos');
+  const [selectedBanco, setSelectedBanco] = useState<string>('TODOS');
 
-// Cédulas que pertenecen estrictamente a la cohorte de Julio por solicitud directa
-const CEDULAS_JULIO_FORZADAS = new Set([
-  '11200321', '25773821', '10001358', '14907686', '18093973',
-  '18501572', '18003787', '25847994', '27163228', '9609349',
-  '12174446', '14652892', '11931380', '7793727', '25894713',
-  '7662055', '11555269', '14652893', '14884967', '28443208',
-  '10000106', '5831725', '31217211', '32266111'
-]);
+  const filteredAsegurados = useMemo(() => {
+    return asegurados.filter(item => {
+      const nombre = item.nombreApellido ?? '';
+      const cedula = String(item.cedula ?? '');
+      const telefono = String(item.telefono ?? '');
 
-export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados }) => {
-  const parseMontoUSD = (val: any): number => {
-    if (val === undefined || val === null) return 5.99;
-    let num = typeof val === 'number' ? val : parseFloat(String(val).replace(/\./g, '').replace(',', '.')) || 5.99;
-    return num > 100 ? num / 100 : num;
-  };
+      const matchSearch = 
+        nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cedula.includes(searchTerm) ||
+        telefono.includes(searchTerm);
 
-  const obtenerMesDesdeFecha = (fechaRaw: any): string | null => {
-    if (!fechaRaw) return null;
-    try {
-      let d = new Date(fechaRaw);
-      if (isNaN(d.getTime())) {
-        const partes = String(fechaRaw).split('/');
-        if (partes.length === 3) {
-          d = new Date(parseInt(partes[2]), parseInt(partes[1]) - 1, parseInt(partes[0]));
-        }
-      }
-      if (isNaN(d.getTime())) return null;
-
-      const mesNum = d.getMonth();
-      const mapaMesesNum: { [key: number]: string } = {
-        6: 'JULIO',
-        7: 'AGOSTO',
-        8: 'SEPTIEMBRE',
-        9: 'OCTUBRE',
-        10: 'NOVIEMBRE',
-        11: 'DICIEMBRE',
-      };
-      return mapaMesesNum[mesNum] || null;
-    } catch {
-      return null;
-    }
-  };
-
-  // Consolidar datos de la matriz con prioridad para las cédulas de Julio
-  const matrixData = useMemo(() => {
-    const mapaTitulares = new Map<
-      string,
-      {
-        cedulaTrim: string;
-        mesInicial: string;
-        pagosPorMes: Map<string, number>;
-        fechasPagos: string[];
-      }
-    >();
-
-    asegurados.forEach((item) => {
-      const cedulaStr = item.cedula ? String(item.cedula).trim() : '';
-      const cedulaKey = cedulaStr || item.nombreApellido?.toLowerCase().trim();
+      const bancoItem = item.banco ?? '';
+      const matchBanco = selectedBanco === 'TODOS' || bancoItem.toUpperCase() === selectedBanco.toUpperCase();
       
-      const mesDesdeFecha = obtenerMesDesdeFecha(item.fechaPago);
-      let mesItem = (mesDesdeFecha || item.mes || 'JULIO').toUpperCase().trim();
+      const estatusItem = item.estatus ?? '';
+      const matchStatus = selectedStatus === 'Todos' || 
+        (selectedStatus === 'Solventes' && estatusItem === 'Solvente') ||
+        (selectedStatus === 'Debe 1 Cuota' && estatusItem.includes('1 cuota')) ||
+        (selectedStatus === 'Debe + de 1 Cuota' && estatusItem.includes('de 1 cuota'));
 
-      // Si la cédula está en la lista forzada de Julio, asegurar su mes inicial
-      if (CEDULAS_JULIO_FORZADAS.has(cedulaStr)) {
-        mesItem = 'JULIO';
-      }
-
-      const montoUSD = parseMontoUSD(item.uds);
-
-      if (!mapaTitulares.has(cedulaKey)) {
-        const pagosMap = new Map<string, number>();
-        pagosMap.set(mesItem, montoUSD);
-        mapaTitulares.set(cedulaKey, {
-          cedulaTrim: cedulaStr,
-          mesInicial: CEDULAS_JULIO_FORZADAS.has(cedulaStr) ? 'JULIO' : mesItem,
-          pagosPorMes: pagosMap,
-          fechasPagos: item.fechaPago ? [item.fechaPago] : [],
-        });
-      } else {
-        const ext = mapaTitulares.get(cedulaKey)!;
-        if (mesItem) {
-          const acumulado = ext.pagosPorMes.get(mesItem) || 0;
-          ext.pagosPorMes.set(mesItem, acumulado + montoUSD);
-        }
-        if (item.fechaPago) {
-          ext.fechasPagos.push(item.fechaPago);
-        }
-      }
+      return matchSearch && matchBanco && matchStatus;
     });
-
-    const clientesConsolidados = Array.from(mapaTitulares.values()).map((c) => {
-      if (CEDULAS_JULIO_FORZADAS.has(c.cedulaTrim)) {
-        return { ...c, mesInicial: 'JULIO' };
-      }
-
-      let fechaMasAntigua = c.fechasPagos.length > 0
-        ? c.fechasPagos.sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0]
-        : null;
-
-      const mesDesdeFechaInicial = obtenerMesDesdeFecha(fechaMasAntigua);
-      const primerMes =
-        mesDesdeFechaInicial ||
-        MESES_ORDENADOS.find((m) => c.pagosPorMes.has(m)) ||
-        c.mesInicial;
-
-      return {
-        ...c,
-        mesInicial: primerMes,
-      };
-    });
-
-    return MESES.map((mesOrigen, origenIdx) => {
-      const clientesCohorte = clientesConsolidados.filter((c) => c.mesInicial === mesOrigen);
-
-      const emisionesCount = clientesCohorte.length;
-      const emisionesMonto = clientesCohorte.reduce(
-        (acc, c) => acc + (c.pagosPorMes.get(mesOrigen) || 0),
-        0
-      );
-
-      const recurrenciaColumnas = MESES.map((mesCol, colIdx) => {
-        if (colIdx <= origenIdx) {
-          return { count: 0, monto: 0 };
-        }
-
-        const pagaronEnMesCol = clientesCohorte.filter((c) => c.pagosPorMes.has(mesCol));
-        const montoEnMesCol = pagaronEnMesCol.reduce(
-          (acc, c) => acc + (c.pagosPorMes.get(mesCol) || 0),
-          0
-        );
-
-        return {
-          count: pagaronEnMesCol.length,
-          monto: montoEnMesCol,
-        };
-      });
-
-      return {
-        mesOrigen,
-        emisionesCount,
-        emisionesMonto,
-        recurrenciaColumnas,
-      };
-    });
-  }, [asegurados]);
+  }, [asegurados, searchTerm, selectedBanco, selectedStatus]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1.5rem' }}>
+    <div style={{ width: '100%', fontFamily: 'sans-serif' }}>
       
-      {/* 1. MATRIZ TRADICIONAL */}
-      <div
-        style={{
-          backgroundColor: '#0f172a',
-          border: '1px solid #1e293b',
-          borderRadius: '1rem',
-          overflow: 'hidden',
-          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.4)',
-        }}
-      >
-        <div
-          style={{
-            padding: '1.25rem 1.5rem',
-            backgroundColor: '#090d16',
-            borderBottom: '1px solid #1e293b',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.6rem',
-          }}
-        >
-          <Layers size={18} color="#38bdf8" />
-          <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>
-            Seguimiento de Gestión de Cobranzas Banco Plaza - Banesco Mensual
-          </h2>
+      {/* Pestañas de Meses y Botón Nuevo Registro */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+          {[
+            { key: 'TODOS', label: 'TODOS', count: asegurados.length },
+            { key: 'JULIO', label: 'JULIO', count: asegurados.filter(i => i.mes === 'JULIO').length },
+            { key: 'AGOSTO', label: 'AGOSTO', count: asegurados.filter(i => i.mes === 'AGOSTO').length },
+            { key: 'SEPTIEMBRE', label: 'SEPTIEMBRE', count: asegurados.filter(i => i.mes === 'SEPTIEMBRE').length },
+            { key: 'OCTUBRE', label: 'OCTUBRE', count: asegurados.filter(i => i.mes === 'OCTUBRE').length },
+            { key: 'NOVIEMBRE', label: 'NOVIEMBRE', count: 0 },
+            { key: 'DICIEMBRE', label: 'DICIEMBRE', count: 0 },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setSelectedMonth(tab.key)}
+              style={{
+                padding: '0.4rem 0.8rem',
+                borderRadius: '0.4rem',
+                border: selectedMonth === tab.key ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                backgroundColor: selectedMonth === tab.key ? '#eff6ff' : '#ffffff',
+                color: selectedMonth === tab.key ? '#0369a1' : '#475569',
+                fontWeight: 600,
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem'
+              }}
+            >
+              <span>{tab.label}</span>
+              <span style={{ backgroundColor: selectedMonth === tab.key ? '#dbeafe' : '#f1f5f9', padding: '0.05rem 0.3rem', borderRadius: '999px', fontSize: '0.65rem' }}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', color: '#f8fafc' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#1e293b', color: '#94a3b8', textTransform: 'uppercase' }}>
-                <th style={{ padding: '0.85rem 1rem', textAlign: 'center', minWidth: '130px' }}>Mes de Gestion</th>
-                <th style={{ padding: '0.85rem 1rem', textAlign: 'left', minWidth: '160px' }}>Seguimiento</th>
-                {MESES.map((mes) => (
-                  <th key={mes} style={{ padding: '0.85rem 1rem', textAlign: 'center', minWidth: '110px' }}>
-                    {mes.charAt(0) + mes.slice(1).toLowerCase()}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {matrixData.map((row) => {
-                const bgHeader =
-                  row.mesOrigen === 'JULIO'
-                    ? '#3b82f6'
-                    : row.mesOrigen === 'AGOSTO'
-                    ? '#f59e0b'
-                    : row.mesOrigen === 'SEPTIEMBRE'
-                    ? '#0f172a'
-                    : '#1e293b';
+        <button
+          onClick={() => {}}
+          style={{ backgroundColor: '#0284c7', color: '#ffffff', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '0.4rem', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}
+        >
+          + Nuevo Registro
+        </button>
+      </div>
 
-                const origenIdx = MESES.indexOf(row.mesOrigen);
+      {/* Botones de Filtro de Estatus */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', backgroundColor: '#ffffff', padding: '0.6rem 0.8rem', borderRadius: '0.4rem', border: '1px solid #e2e8f0' }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>Filtrar Estatus:</span>
+        {['Todos', 'Solventes', 'Debe 1 Cuota', 'Debe + de 1 Cuota'].map(status => (
+          <button
+            key={status}
+            onClick={() => setSelectedStatus(status)}
+            style={{
+              padding: '0.3rem 0.6rem',
+              borderRadius: '999px',
+              border: 'none',
+              backgroundColor: selectedStatus === status ? '#0284c7' : '#f1f5f9',
+              color: selectedStatus === status ? '#ffffff' : '#475569',
+              fontWeight: 600,
+              fontSize: '0.7rem',
+              cursor: 'pointer'
+            }}
+          >
+            {status}
+          </button>
+        ))}
+      </div>
+
+      {/* Barra de Búsqueda y Bancos */}
+      <div style={{ backgroundColor: '#ffffff', padding: '0.8rem', borderRadius: '0.4rem', border: '1px solid #e2e8f0', marginBottom: '1.2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between' }}>
+        <input
+          type="text"
+          placeholder="Buscar por titular, C.I. o teléfono..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{ flex: 1, minWidth: '260px', padding: '0.45rem 0.7rem', borderRadius: '0.3rem', border: '1px solid #cbd5e1', fontSize: '0.8rem', outline: 'none' }}
+        />
+        <select
+          value={selectedBanco}
+          onChange={(e) => setSelectedBanco(e.target.value)}
+          style={{ padding: '0.45rem 0.7rem', borderRadius: '0.3rem', border: '1px solid #cbd5e1', fontSize: '0.8rem', backgroundColor: '#fff', cursor: 'pointer' }}
+        >
+          <option value="TODOS">Todos los Bancos</option>
+          <option value="BANCO PLAZA">Banco Plaza</option>
+          <option value="BANESCO">Banesco</option>
+        </select>
+      </div>
+
+      {/* Tabla Principal */}
+      <div style={{ backgroundColor: '#ffffff', borderRadius: '0.4rem', border: '1px solid #e2e8f0', overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#0f172a', color: '#ffffff', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.05em' }}>
+              <th style={{ padding: '0.6rem 0.8rem' }}>Fecha Últ. Pago</th>
+              <th style={{ padding: '0.6rem 0.8rem', width: '26%' }}>Nombre y Apellido</th>
+              <th style={{ padding: '0.6rem 0.8rem' }}>Cédula</th>
+              <th style={{ padding: '0.6rem 0.8rem' }}>Teléfono</th>
+              <th style={{ padding: '0.6rem 0.8rem' }}>Cuota ($)</th>
+              <th style={{ padding: '0.6rem 0.8rem' }}>Banco</th>
+              <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Jul</th>
+              <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Ago</th>
+              <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Sep</th>
+              <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Oct</th>
+              <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Nov</th>
+              <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Dic</th>
+              <th style={{ padding: '0.6rem 0.8rem' }}>Estatus</th>
+              <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredAsegurados.length === 0 ? (
+              <tr>
+                <td colSpan={14} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                  No se encontraron registros coincidentes.
+                </td>
+              </tr>
+            ) : (
+              filteredAsegurados.map((item, index) => {
+                const rawUds = Number(item.uds) || 599;
+                const formattedUds = (rawUds > 50 ? rawUds / 100 : rawUds).toFixed(2).replace('.', ',');
 
                 return (
-                  <React.Fragment key={row.mesOrigen}>
-                    <tr style={{ borderTop: '2px solid #334155', backgroundColor: '#0f172a' }}>
-                      <td
-                        rowSpan={4}
-                        style={{
-                          backgroundColor: bgHeader,
-                          color: '#ffffff',
-                          fontWeight: 800,
-                          textAlign: 'center',
-                          fontSize: '1rem',
-                          borderRight: '1px solid #334155',
-                        }}
+                  <tr key={item.id || index} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
+                    <td style={{ padding: '0.55rem 0.8rem', color: '#475569' }}>{item.fechaPago || '-'}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', fontWeight: 600, color: '#0f172a' }}>{item.nombreApellido || '-'}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', color: '#334155' }}>{item.cedula || '-'}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', color: '#334155' }}>{item.telefono || '-'}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', color: '#0284c7', fontWeight: 600 }}>${formattedUds}</td>
+                    <td style={{ padding: '0.55rem 0.8rem' }}>
+                      <span style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem', borderRadius: '0.2rem', border: '1px solid #cbd5e1', color: '#475569', backgroundColor: '#fff' }}>
+                        {item.banco || '-'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.jul !== undefined ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.jul ?? 0}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.ago !== undefined ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.ago ?? 0}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.sep !== undefined ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.sep ?? 0}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.oct !== undefined ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.oct ?? 0}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#94a3b8' }}>{item.nov ?? 0}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#94a3b8' }}>{item.dic ?? 0}</td>
+                    <td style={{ padding: '0.55rem 0.8rem' }}>
+                      <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: '1rem', backgroundColor: '#dcfce7', color: '#166534', fontWeight: 600 }}>
+                        {item.estatus || 'Solvente'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center' }}>
+                      <button
+                        onClick={() => onSelectAsegurado(item)}
+                        style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '0.25rem 0.5rem', borderRadius: '0.3rem', fontSize: '0.7rem', fontWeight: 600, color: '#334155', cursor: 'pointer' }}
                       >
-                        {row.mesOrigen.charAt(0) + row.mesOrigen.slice(1).toLowerCase()}
-                      </td>
-                      <td style={{ padding: '0.45rem 1rem', fontWeight: 700, color: '#f8fafc' }}>Emision</td>
-                      {MESES.map((mesCol, mIdx) => {
-                        const esSuMes = mIdx === origenIdx;
-                        return (
-                          <td
-                            key={mesCol}
-                            style={{
-                              padding: '0.45rem 1rem',
-                              textAlign: 'center',
-                              fontWeight: 700,
-                              color: esSuMes ? '#38bdf8' : '#64748b',
-                            }}
-                          >
-                            {esSuMes ? row.emisionesCount : ''}
-                          </td>
-                        );
-                      })}
-                    </tr>
-
-                    <tr style={{ backgroundColor: '#0f172a' }}>
-                      <td style={{ padding: '0.45rem 1rem', fontWeight: 700, color: '#f8fafc' }}>Recurrencia</td>
-                      {MESES.map((mesCol, mIdx) => {
-                        const colData = row.recurrenciaColumnas[mIdx];
-                        const esPosterior = mIdx > origenIdx;
-                        return (
-                          <td
-                            key={mesCol}
-                            style={{
-                              padding: '0.45rem 1rem',
-                              textAlign: 'center',
-                              fontWeight: 700,
-                              color: esPosterior ? '#34d399' : '#64748b',
-                            }}
-                          >
-                            {esPosterior ? colData.count : ''}
-                          </td>
-                        );
-                      })}
-                    </tr>
-
-                    <tr style={{ backgroundColor: '#020617' }}>
-                      <td style={{ padding: '0.45rem 1rem', fontWeight: 700, color: '#f8fafc' }}>Monto $ Emision</td>
-                      {MESES.map((mesCol, mIdx) => {
-                        const esSuMes = mIdx === origenIdx;
-                        return (
-                          <td
-                            key={mesCol}
-                            style={{
-                              padding: '0.45rem 1rem',
-                              textAlign: 'center',
-                              fontWeight: 800,
-                              color: esSuMes ? '#38bdf8' : '#64748b',
-                            }}
-                          >
-                            {esSuMes ? formatUSD(row.emisionesMonto) : ''}
-                          </td>
-                        );
-                      })}
-                    </tr>
-
-                    <tr style={{ backgroundColor: '#020617', borderBottom: '2px dashed #334155' }}>
-                      <td style={{ padding: '0.45rem 1rem', fontWeight: 700, color: '#f8fafc' }}>Monto $ Recurrencia</td>
-                      {MESES.map((mesCol, mIdx) => {
-                        const colData = row.recurrenciaColumnas[mIdx];
-                        const esPosterior = mIdx > origenIdx;
-                        return (
-                          <td
-                            key={mesCol}
-                            style={{
-                              padding: '0.45rem 1rem',
-                              textAlign: 'center',
-                              fontWeight: 800,
-                              color: esPosterior ? '#34d399' : '#64748b',
-                            }}
-                          >
-                            {esPosterior ? (colData.monto > 0 ? formatUSD(colData.monto) : '$0,00') : ''}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  </React.Fragment>
+                        ✏️ Editar
+                      </button>
+                    </td>
+                  </tr>
                 );
-              })}
-            </tbody>
-          </table>
-        </div>
+              })
+            )}
+          </tbody>
+        </table>
       </div>
-
-      {/* 2. SECCIÓN DE GRÁFICOS ANALÍTICOS */}
-      <div
-        style={{
-          backgroundColor: '#0f172a',
-          border: '1px solid #1e293b',
-          borderRadius: '1rem',
-          overflow: 'hidden',
-          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.4)',
-        }}
-      >
-        <div
-          style={{
-            padding: '1.25rem 1.5rem',
-            backgroundColor: '#090d16',
-            borderBottom: '1px solid #1e293b',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.6rem',
-          }}
-        >
-          <BarChart3 size={18} color="#34d399" />
-          <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>
-            Análisis Gráfico de Emisión y Recurrencia por Cohorte
-          </h2>
-        </div>
-
-        <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {matrixData.map((row) => {
-            const maxCount = Math.max(row.emisionesCount, 1);
-            const bgHeader =
-              row.mesOrigen === 'JULIO'
-                ? '#3b82f6'
-                : row.mesOrigen === 'AGOSTO'
-                ? '#f59e0b'
-                : row.mesOrigen === 'SEPTIEMBRE'
-                ? '#64748b'
-                : '#1e293b';
-
-            return (
-              <div
-                key={row.mesOrigen}
-                style={{
-                  backgroundColor: '#020617',
-                  border: '1px solid #1e293b',
-                  borderRadius: '0.875rem',
-                  padding: '1.25rem',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    borderBottom: '1px solid #1e293b',
-                    paddingBottom: '0.75rem',
-                    marginBottom: '1rem',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div
-                      style={{
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '50%',
-                        backgroundColor: bgHeader,
-                      }}
-                    />
-                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>
-                      Cohorte: {row.mesOrigen.charAt(0) + row.mesOrigen.slice(1).toLowerCase()}
-                    </h3>
-                  </div>
-                  <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: '#94a3b8' }}>
-                    <span>Emisión Base: <strong style={{ color: '#38bdf8' }}>{row.emisionesCount} clientes</strong></span>
-                    <span>Monto Base: <strong style={{ color: '#34d399' }}>{formatUSD(row.emisionesMonto)}</strong></span>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
-                  {MESES.map((mesCol, mIdx) => {
-                    const origenIdx = MESES.indexOf(row.mesOrigen);
-                    const esSuMes = mIdx === origenIdx;
-                    const esPosterior = mIdx > origenIdx;
-
-                    let count = 0;
-                    let monto = 0;
-                    let labelTipo = '';
-
-                    if (esSuMes) {
-                      count = row.emisionesCount;
-                      monto = row.emisionesMonto;
-                      labelTipo = 'Emisión';
-                    } else if (esPosterior) {
-                      const colData = row.recurrenciaColumnas[mIdx];
-                      count = colData.count;
-                      monto = colData.monto;
-                      labelTipo = 'Recurrencia';
-                    } else {
-                      return null;
-                    }
-
-                    const porcentajeBarra = maxCount > 0 ? (count / maxCount) * 100 : 0;
-
-                    return (
-                      <div
-                        key={mesCol}
-                        style={{
-                          backgroundColor: '#0f172a',
-                          border: '1px solid #1e293b',
-                          borderRadius: '0.5rem',
-                          padding: '0.75rem',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between',
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '0.2rem' }}>
-                            {mesCol.charAt(0) + mesCol.slice(1).toLowerCase()}
-                          </div>
-                          <div style={{ fontSize: '0.65rem', color: esSuMes ? '#38bdf8' : '#34d399', marginBottom: '0.4rem', fontWeight: 600 }}>
-                            {labelTipo}
-                          </div>
-                        </div>
-
-                        <div style={{ margin: '0.2rem 0' }}>
-                          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc', lineHeight: 1.1 }}>
-                            {count} <span style={{ fontSize: '0.65rem', fontWeight: 400, color: '#64748b' }}>cli.</span>
-                          </div>
-                          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399', marginTop: '0.15rem' }}>
-                            {formatUSD(monto)}
-                          </div>
-                        </div>
-
-                        <div style={{ width: '100%', backgroundColor: '#1e293b', borderRadius: '9999px', height: '6px', overflow: 'hidden', marginTop: '0.5rem' }}>
-                          <div
-                            style={{
-                              width: `${porcentajeBarra}%`,
-                              backgroundColor: esSuMes ? '#3b82f6' : '#10b981',
-                              height: '100%',
-                              borderRadius: '9999px',
-                              transition: 'width 0.4s ease',
-                            }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
     </div>
   );
 };
