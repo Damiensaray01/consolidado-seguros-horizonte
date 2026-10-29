@@ -90,19 +90,20 @@ export default function Home() {
 
   if (!isAuthenticated) {
     return (
-      <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', fontFamily: 'sans-serif' }}>
-        <div style={{ backgroundColor: '#ffffff', padding: '2.5rem 2rem', borderRadius: '0.75rem', boxShadow: '0 10px 25px rgba(0,0,0,0.08)', width: '100%', maxWidth: '380px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+      <main style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        backgroundImage: 'linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.85)), url("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1920&q=80")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        fontFamily: 'sans-serif',
+        padding: '1rem'
+      }}>
+        <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: '2.5rem 2rem', borderRadius: '0.75rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)', width: '100%', maxWidth: '380px', backdropFilter: 'blur(8px)', textAlign: 'center' }}>
           
-          {/* Logotipo oficial corporativo de Seguros Horizonte */}
-          <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'center' }}>
-            <img 
-              src="https://upload.wikimedia.org/wikipedia/commons/4/45/Seguros_Horizonte_logo.png" 
-              alt="Seguros Horizonte Logo" 
-              style={{ height: '48px', objectFit: 'contain' }} 
-            />
-          </div>
-
-          <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.15rem', fontWeight: 700, color: '#0f172a' }}>Seguros Horizonte</h2>
+          <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>Seguros Horizonte</h2>
           <p style={{ margin: '0 0 1.5rem', fontSize: '0.75rem', color: '#64748b' }}>Gestión Operativa • Business Intelligence</p>
           
           <form onSubmit={(e) => { e.preventDefault(); if (username === 'ADMBiartet' && password === 'ADM2026') { setIsAuthenticated(true); setLoginError(false); } else { setLoginError(true); } }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
