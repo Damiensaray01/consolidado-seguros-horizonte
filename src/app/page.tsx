@@ -61,7 +61,7 @@ export default function Home() {
         fontFamily: 'sans-serif',
         padding: '1rem'
       }}>
-        <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: '2.5rem', borderRadius: '1rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)', textAlign: 'center', width: '100%', maxWidth: '420px', backdropFilter: 'blur(8px)' }}>
+        <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: '2.5rem', borderRadius: '1rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)', textAlign: 'center', width: '100%', maxWidth: '1200px', backdropFilter: 'blur(8px)' }}>
           
           <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
             <img 
