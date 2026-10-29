@@ -13,7 +13,7 @@ interface PaymentsTableProps {
   onTabChange?: (tab: string) => void;
 }
 
-const MESES = ['TODOS', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE'];
+const MESES = ['TODOS', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 const MESES_ORDENADOS = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
 export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSelectAsegurado, onTabChange }) => {
@@ -85,7 +85,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     }
   };
 
-  // Consolidación de registros por Cédula determinando estrictamente el PRIMER mes con pago
+  // Consolidación estricta por Cédula y asignación del primer mes con pago
   const aseguradosConsolidados = useMemo(() => {
     const mapa = new Map<
       string,
@@ -103,7 +103,6 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
       
       let mesItem = String(item.mes || '').toUpperCase().trim();
       
-      // Si el ID del documento viene codificado como CEDULA_MES
       if (!MESES_ORDENADOS.includes(mesItem) && item.id) {
         const partesId = String(item.id).toUpperCase().split('_');
         const posibleMes = partesId[partesId.length - 1];
@@ -123,7 +122,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
           NUMERO: item.NUMERO || item.numero || item.telefono || '',
           mesesPagados: mesesAsignados,
           montoCuotaReal: montoUSD > 10 ? 5.99 : montoUSD,
-          primerMesPagado: '',
+          primerMesPagado: 'JULIO',
           fechasPagos: item.fechaPago ? [item.fechaPago] : [],
         });
       } else {
@@ -145,7 +144,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
 
     return Array.from(mapa.values())
       .map((item) => {
-        // Asignación estricta del PRIMER mes en el que el cliente tiene un pago registrado (1)
+        // Encontrar estrictamente el primer mes cronológico con pago (1)
         const primerMesReal = MESES_ORDENADOS.find((m) => item.mesesPagados.has(m)) || 'JULIO';
 
         return {
@@ -171,7 +170,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
   }, [asegurados]);
 
   const filteredData = aseguradosConsolidados.filter((item) => {
-    // Filtrado de pestaña usando estrictamente primerMesPagado
+    // Filtrado estricto por la pestaña activa usando el primer mes real de pago
     const matchesMes = activeTab === 'TODOS' || item.primerMesPagado === activeTab;
 
     const query = searchTerm.toLowerCase();
@@ -354,7 +353,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
       }}
     >
-      {/* Pestañas de Meses Activos con conteo dinámico exacto */}
+      {/* Pestañas de Meses Activos con conteo exacto */}
       <div
         style={{
           display: 'flex',
