@@ -1,9 +1,9 @@
-'use client';
+ï»¿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { PaymentsTable } from '../components/PaymentsTable';
+import { PaymentsTable } from '@/components/PaymentsTable';
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -59,13 +59,13 @@ export default function Home() {
             Consolidado de Pagos y Cobranzas
           </h2>
           <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '1.5rem' }}>
-            Gestión Operativa • Business Intelligence
+            GestiÃ³n Operativa â€¢ Business Intelligence
           </p>
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <input
               type="password"
-              placeholder="Ingrese la contraseña..."
+              placeholder="Ingrese la contraseÃ±a..."
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
@@ -75,14 +75,14 @@ export default function Home() {
             />
             {error && (
               <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: 600 }}>
-                Contraseña incorrecta. Intente nuevamente.
+                ContraseÃ±a incorrecta. Intente nuevamente.
               </span>
             )}
             <button
               type="submit"
               style={{ backgroundColor: '#0284c7', color: '#ffffff', border: 'none', padding: '0.6rem', borderRadius: '0.5rem', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
             >
-              Iniciar Sesión
+              Iniciar SesiÃ³n
             </button>
           </form>
         </div>
@@ -99,14 +99,14 @@ export default function Home() {
               Consolidado de Pagos Cobranzas - Seguros Horizonte
             </h1>
             <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.25rem 0 0 0' }}>
-              Business Intelligence 2026 • Gestión Operativa
+              Business Intelligence 2026 â€¢ GestiÃ³n Operativa
             </p>
           </div>
           <button
             onClick={() => setIsLoggedIn(false)}
             style={{ backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', padding: '0.4rem 0.8rem', borderRadius: '0.5rem', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer' }}
           >
-            Cerrar Sesión
+            Cerrar SesiÃ³n
           </button>
         </div>
 
