@@ -69,7 +69,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados }
 
     asegurados.forEach((item) => {
       const cedulaStr = item.cedula ? String(item.cedula).trim() : '';
-      const cedulaKey = cedulaStr || item.nombreApellido.trim();
+      const cedulaKey = cedulaStr || item.nombreApellido?.toLowerCase().trim();
       
       const mesDesdeFecha = obtenerMesDesdeFecha(item.fechaPago);
       let mesItem = (mesDesdeFecha || item.mes || 'JULIO').toUpperCase().trim();
