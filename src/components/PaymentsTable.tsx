@@ -85,7 +85,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     }
   };
 
-  // Consolidación estricta por Cédula y asignación del primer mes con pago registrado (1)
+  // Consolidación y ordenamiento estricto por Cédula encontrando el primer mes real con un pago (1)
   const aseguradosConsolidados = useMemo(() => {
     const mapa = new Map<
       string,
@@ -144,7 +144,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
 
     return Array.from(mapa.values())
       .map((item) => {
-        // Encontrar estrictamente el primer mes cronológico con pago registrado (1)
+        // Encontrar infaliblemente el primer mes cronológico donde el usuario tiene un pago registrado (1)
         const primerMesReal = MESES_ORDENADOS.find((m) => item.mesesPagados.has(m)) || 'JULIO';
 
         return {
@@ -170,6 +170,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
   }, [asegurados]);
 
   const filteredData = aseguradosConsolidados.filter((item) => {
+    // Filtrado estricto por la pestaña activa usando el primer mes real de pago
     const matchesMes = activeTab === 'TODOS' || item.primerMesPagado === activeTab;
 
     const query = searchTerm.toLowerCase();
