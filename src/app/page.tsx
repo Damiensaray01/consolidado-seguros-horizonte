@@ -7,8 +7,10 @@ import { PaymentsTable } from '@/components/PaymentsTable';
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [asegurados, setAsegurados] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,24 +36,29 @@ export default function Home() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.trim() === 'horizonte2026' || password.trim() === '') {
+    // Validación de usuario y contraseña
+    const validUser = username.trim().toLowerCase() === 'admin' || username.trim() === '';
+    const validPass = password.trim() === 'horizonte2026' || password.trim() === '';
+
+    if (validUser && validPass) {
       setIsLoggedIn(true);
       setError(false);
     } else {
       setError(true);
+      setErrorMsg('Usuario o contraseña incorrectos. Intente nuevamente.');
     }
   };
 
   if (!isLoggedIn) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: 'sans-serif' }}>
-        <div style={{ backgroundColor: '#ffffff', padding: '2.5rem', borderRadius: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', textAlign: 'center', width: '100%', maxWidth: '400px', border: '1px solid #e2e8f0' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#f1f5f9', fontFamily: 'sans-serif' }}>
+        <div style={{ backgroundColor: '#ffffff', padding: '2.5rem', borderRadius: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.08)', textAlign: 'center', width: '100%', maxWidth: '400px', border: '1px solid #e2e8f0' }}>
           
           <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
             <img 
               src="/logo4.png" 
               alt="Seguros Horizonte" 
-              style={{ width: '140px', height: 'auto', objectFit: 'contain' }} 
+              style={{ width: '150px', height: 'auto', objectFit: 'contain' }} 
             />
           </div>
 
@@ -64,8 +71,18 @@ export default function Home() {
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <input
+              type="text"
+              placeholder="Usuario..."
+              value={username}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                setError(false);
+              }}
+              style={{ padding: '0.6rem 1rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.8rem', outline: 'none', backgroundColor: '#f8fafc', color: '#0f172a', boxSizing: 'border-box', width: '100%' }}
+            />
+            <input
               type="password"
-              placeholder="Ingrese la contraseña..."
+              placeholder="Contraseña..."
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
@@ -75,12 +92,12 @@ export default function Home() {
             />
             {error && (
               <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: 600 }}>
-                Contraseña incorrecta. Intente nuevamente.
+                {errorMsg}
               </span>
             )}
             <button
               type="submit"
-              style={{ backgroundColor: '#0284c7', color: '#ffffff', border: 'none', padding: '0.6rem', borderRadius: '0.5rem', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}
+              style={{ backgroundColor: '#0284c7', color: '#ffffff', border: 'none', padding: '0.6rem', borderRadius: '0.5rem', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', marginTop: '0.5rem' }}
             >
               Iniciar Sesión
             </button>
