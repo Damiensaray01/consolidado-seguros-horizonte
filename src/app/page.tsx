@@ -114,8 +114,8 @@ export default function Home() {
   }
 
   return (
-    <main style={{ padding: '2rem', backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <main style={{ padding: '1.5rem 2rem', backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'sans-serif', width: '100%', boxSizing: 'border-box' }}>
+      <div style={{ width: '100%', maxWidth: '100%', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <div>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
