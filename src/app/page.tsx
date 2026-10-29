@@ -36,33 +36,43 @@ export default function Home() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Validación de usuario y contraseña
-    const validUser = username.trim().toLowerCase() === 'admin' || username.trim() === '';
-    const validPass = password.trim() === 'horizonte2026' || password.trim() === '';
+    // Contraseña actualizada a ADM2026
+    const validPass = password.trim() === 'ADM2026';
 
-    if (validUser && validPass) {
+    if (validPass) {
       setIsLoggedIn(true);
       setError(false);
     } else {
       setError(true);
-      setErrorMsg('Usuario o contraseña incorrectos. Intente nuevamente.');
+      setErrorMsg('Contraseña incorrecta. Intente nuevamente.');
     }
   };
 
   if (!isLoggedIn) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#f1f5f9', fontFamily: 'sans-serif' }}>
-        <div style={{ backgroundColor: '#ffffff', padding: '2.5rem', borderRadius: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.08)', textAlign: 'center', width: '100%', maxWidth: '400px', border: '1px solid #e2e8f0' }}>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '100vh', 
+        backgroundImage: 'linear-gradient(rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.7)), url("/logo5.png")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        fontFamily: 'sans-serif',
+        padding: '1rem'
+      }}>
+        <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: '2.5rem', borderRadius: '1rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)', textAlign: 'center', width: '100%', maxWidth: '420px', backdropFilter: 'blur(8px)' }}>
           
           <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
             <img 
               src="/logo4.png" 
               alt="Seguros Horizonte" 
-              style={{ width: '150px', height: 'auto', objectFit: 'contain' }} 
+              style={{ width: '160px', height: 'auto', objectFit: 'contain' }} 
             />
           </div>
 
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.25rem' }}>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.25rem' }}>
             Consolidado de Pagos y Cobranzas
           </h2>
           <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '1.5rem' }}>
@@ -72,13 +82,10 @@ export default function Home() {
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <input
               type="text"
-              placeholder="Usuario..."
+              placeholder="Usuario (Opcional)..."
               value={username}
-              onChange={(e) => {
-                setUsername(e.target.value);
-                setError(false);
-              }}
-              style={{ padding: '0.6rem 1rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.8rem', outline: 'none', backgroundColor: '#f8fafc', color: '#0f172a', boxSizing: 'border-box', width: '100%' }}
+              onChange={(e) => setUsername(e.target.value)}
+              style={{ padding: '0.7rem 1rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', outline: 'none', backgroundColor: '#f8fafc', color: '#0f172a', boxSizing: 'border-box', width: '100%' }}
             />
             <input
               type="password"
@@ -88,16 +95,16 @@ export default function Home() {
                 setPassword(e.target.value);
                 setError(false);
               }}
-              style={{ padding: '0.6rem 1rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.8rem', outline: 'none', backgroundColor: '#f8fafc', color: '#0f172a', boxSizing: 'border-box', width: '100%' }}
+              style={{ padding: '0.7rem 1rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', outline: 'none', backgroundColor: '#f8fafc', color: '#0f172a', boxSizing: 'border-box', width: '100%' }}
             />
             {error && (
-              <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 600 }}>
                 {errorMsg}
               </span>
             )}
             <button
               type="submit"
-              style={{ backgroundColor: '#0284c7', color: '#ffffff', border: 'none', padding: '0.6rem', borderRadius: '0.5rem', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', marginTop: '0.5rem' }}
+              style={{ backgroundColor: '#0284c7', color: '#ffffff', border: 'none', padding: '0.7rem', borderRadius: '0.5rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', marginTop: '0.5rem', boxShadow: '0 4px 6px -1px rgba(2, 132, 199, 0.3)' }}
             >
               Iniciar Sesión
             </button>
