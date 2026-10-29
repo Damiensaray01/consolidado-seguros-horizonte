@@ -19,6 +19,7 @@ export default function Home() {
   const [asegurados, setAsegurados] = useState<Asegurado[]>([]);
   const [selectedAsegurado, setSelectedAsegurado] = useState<Asegurado | null>(null);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [globalStatus, setGlobalStatus] = useState<string>('Todos');
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -34,7 +35,6 @@ export default function Home() {
     return () => unsubscribe();
   }, [isAuthenticated]);
 
-  // Consolidación idéntica para alimentar las tarjetas KPI en tiempo real
   const consolidatedAsegurados = useMemo(() => {
     const map = new Map<string, any>();
     asegurados.forEach(item => {
@@ -90,22 +90,32 @@ export default function Home() {
 
   if (!isAuthenticated) {
     return (
-      <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9', fontFamily: 'sans-serif' }}>
-        <div style={{ backgroundColor: '#ffffff', padding: '2rem', borderRadius: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '100%', maxWidth: '360px' }}>
-          <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', textAlign: 'center' }}>Seguros Horizonte</h2>
-          <p style={{ margin: '0 0 1.5rem', fontSize: '0.8rem', color: '#64748b', textAlign: 'center' }}>Gestión Operativa • Business Intelligence</p>
+      <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', fontFamily: 'sans-serif' }}>
+        <div style={{ backgroundColor: '#ffffff', padding: '2.5rem 2rem', borderRadius: '0.75rem', boxShadow: '0 10px 25px rgba(0,0,0,0.08)', width: '100%', maxWidth: '380px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
           
-          <form onSubmit={(e) => { e.preventDefault(); if (username === 'ADMBiartet' && password === 'ADM2026') { setIsAuthenticated(true); setLoginError(false); } else { setLoginError(true); } }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Logotipo oficial corporativo de Seguros Horizonte */}
+          <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'center' }}>
+            <img 
+              src="https://upload.wikimedia.org/wikipedia/commons/4/45/Seguros_Horizonte_logo.png" 
+              alt="Seguros Horizonte Logo" 
+              style={{ height: '48px', objectFit: 'contain' }} 
+            />
+          </div>
+
+          <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.15rem', fontWeight: 700, color: '#0f172a' }}>Seguros Horizonte</h2>
+          <p style={{ margin: '0 0 1.5rem', fontSize: '0.75rem', color: '#64748b' }}>Gestión Operativa • Business Intelligence</p>
+          
+          <form onSubmit={(e) => { e.preventDefault(); if (username === 'ADMBiartet' && password === 'ADM2026') { setIsAuthenticated(true); setLoginError(false); } else { setLoginError(true); } }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
             <div>
               <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>Usuario</label>
-              <input type="text" required value={username} onChange={e => setUsername(e.target.value)} style={{ width: '100%', padding: '0.5rem', borderRadius: '0.3rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', marginTop: '0.2rem' }} />
+              <input type="text" required value={username} onChange={e => setUsername(e.target.value)} style={{ width: '100%', padding: '0.55rem 0.7rem', borderRadius: '0.35rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', marginTop: '0.2rem', outline: 'none' }} />
             </div>
             <div>
               <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>Contraseña</label>
-              <input type="password" required value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', padding: '0.5rem', borderRadius: '0.3rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', marginTop: '0.2rem' }} />
+              <input type="password" required value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', padding: '0.55rem 0.7rem', borderRadius: '0.35rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', marginTop: '0.2rem', outline: 'none' }} />
             </div>
             {loginError && <p style={{ color: '#dc2626', fontSize: '0.75rem', margin: 0, textAlign: 'center' }}>Credenciales incorrectas.</p>}
-            <button type="submit" style={{ backgroundColor: '#0284c7', color: '#fff', border: 'none', padding: '0.6rem', borderRadius: '0.3rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', marginTop: '0.5rem' }}>
+            <button type="submit" style={{ backgroundColor: '#0284c7', color: '#fff', border: 'none', padding: '0.65rem', borderRadius: '0.35rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', marginTop: '0.5rem', transition: 'background 0.2s' }}>
               Iniciar Sesión
             </button>
           </form>
@@ -118,9 +128,15 @@ export default function Home() {
     <main style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
       <Header onLogout={() => setIsAuthenticated(false)} />
       <div style={{ padding: '1.5rem', maxWidth: '1400px', margin: '0 auto' }}>
-        <KpiCards asegurados={consolidatedAsegurados} />
+        <KpiCards 
+          asegurados={consolidatedAsegurados} 
+          selectedStatus={globalStatus}
+          onSelectStatus={(st) => setGlobalStatus(st)}
+        />
         <RecurrenceMatrix 
           asegurados={asegurados} 
+          externalStatusFilter={globalStatus}
+          onStatusFilterChange={(st) => setGlobalStatus(st)}
           onSelectAsegurado={(item) => setSelectedAsegurado(item)} 
           onOpenNewRegistro={() => setIsNewModalOpen(true)}
         />

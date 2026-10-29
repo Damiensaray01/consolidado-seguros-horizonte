@@ -1,21 +1,37 @@
 ﻿'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Asegurado } from '@/types';
 
 interface RecurrenceMatrixProps {
   asegurados: Asegurado[];
+  externalStatusFilter?: string;
+  onStatusFilterChange?: (status: string) => void;
   onSelectAsegurado: (asegurado: Asegurado) => void;
   onOpenNewRegistro: () => void;
 }
 
-export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, onSelectAsegurado, onOpenNewRegistro }) => {
+export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ 
+  asegurados, 
+  externalStatusFilter = 'Todos', 
+  onStatusFilterChange, 
+  onSelectAsegurado, 
+  onOpenNewRegistro 
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string>('TODOS');
-  const [selectedStatus, setSelectedStatus] = useState<string>('Todos');
+  const [selectedStatus, setSelectedStatus] = useState<string>(externalStatusFilter);
   const [selectedBanco, setSelectedBanco] = useState<string>('TODOS');
 
-  // Consolidar y calcular el número exacto de cuotas pendientes hasta la fecha actual (Octubre 2026)
+  useEffect(() => {
+    setSelectedStatus(externalStatusFilter);
+  }, [externalStatusFilter]);
+
+  const handleStatusChange = (status: string) => {
+    setSelectedStatus(status);
+    if (onStatusFilterChange) onStatusFilterChange(status);
+  };
+
   const consolidatedAsegurados = useMemo(() => {
     const map = new Map<string, any>();
 
@@ -128,8 +144,8 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
         matchStatus = item.estatusCalculado === 'Solvente';
       } else if (selectedStatus === 'Debe 1 Cuota') {
         matchStatus = item.estatusCalculado === 'Debe 1 Cuota';
-      } else if (selectedStatus === 'Debe + de 1 Cuota') {
-        matchStatus = item.cuotasDebidas > 1;
+      } else if (selectedStatus === 'Debe + de 1 Cuota' || selectedStatus.includes('Debe')) {
+        matchStatus = item.cuotasDebidas >= 1;
       }
 
       let matchMonth = true;
@@ -137,8 +153,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       if (selectedMonth === 'AGOSTO') matchMonth = item.mesInicial === 'AGOSTO';
       if (selectedMonth === 'SEPTIEMBRE') matchMonth = item.mesInicial === 'SEPTIEMBRE';
       if (selectedMonth === 'OCTUBRE') matchMonth = item.mesInicial === 'OCTUBRE';
-      if (selectedMonth === 'NOVIEMBRE') matchMonth = item.mesInicial === 'NOVIEMBRE';
-      if (selectedMonth === 'DICIEMBRE') matchMonth = item.mesInicial === 'DICIEMBRE';
 
       return matchSearch && matchBanco && matchStatus && matchMonth;
     });
@@ -179,8 +193,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
             { key: 'AGOSTO', label: 'AGOSTO', count: consolidatedAsegurados.filter(i => i.mesInicial === 'AGOSTO').length },
             { key: 'SEPTIEMBRE', label: 'SEPTIEMBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'SEPTIEMBRE').length },
             { key: 'OCTUBRE', label: 'OCTUBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'OCTUBRE').length },
-            { key: 'NOVIEMBRE', label: 'NOVIEMBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'NOVIEMBRE').length },
-            { key: 'DICIEMBRE', label: 'DICIEMBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'DICIEMBRE').length },
           ].map(tab => (
             <button
               key={tab.key}
@@ -223,13 +235,13 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
         </div>
       </div>
 
-      {/* Filtros de Estatus */}
+      {/* Botones de Filtro de Estatus */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', backgroundColor: '#ffffff', padding: '0.6rem 0.8rem', borderRadius: '0.4rem', border: '1px solid #e2e8f0' }}>
         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>Filtrar Estatus:</span>
         {['Todos', 'Solventes', 'Debe 1 Cuota', 'Debe + de 1 Cuota'].map(status => (
           <button
             key={status}
-            onClick={() => setSelectedStatus(status)}
+            onClick={() => handleStatusChange(status)}
             style={{
               padding: '0.3rem 0.6rem',
               borderRadius: '999px',
