@@ -9,6 +9,7 @@
   banco?: string;
   mes?: string;
   estatus?: string;
+  statusPago?: string;
   jul?: number | string;
   ago?: number | string;
   sep?: number | string;
