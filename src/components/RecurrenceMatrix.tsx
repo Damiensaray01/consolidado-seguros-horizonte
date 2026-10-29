@@ -14,18 +14,11 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
   const [selectedStatus, setSelectedStatus] = useState<string>('Todos');
   const [selectedBanco, setSelectedBanco] = useState<string>('TODOS');
 
-  // Consolidar clientes únicos por cédula y calcular su mes inicial y seguimiento
+  // Consolidar y unificar clientes únicos por cédula
   const consolidatedAsegurados = useMemo(() => {
     const map = new Map<string, any>();
 
-    // Ordenar de más antiguo a más reciente para detectar el mes inicial real
-    const sortedItems = [...asegurados].sort((a, b) => {
-      const fechaA = new Date(a.fechaPago || '').getTime() || 0;
-      const fechaB = new Date(b.fechaPago || '').getTime() || 0;
-      return fechaA - fechaB;
-    });
-
-    sortedItems.forEach(item => {
+    asegurados.forEach(item => {
       const key = String(item.cedula || item.nombreApellido || Math.random()).trim();
       
       if (!map.has(key)) {
@@ -37,13 +30,13 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
           oct: 0,
           nov: 0,
           dic: 0,
-          mesInicial: 'JULIO'
         });
       }
 
       const entry = map.get(key)!;
       const itemAny = item as any;
 
+      // Asignar cuotas mensuales desde Firestore
       const julVal = Number(itemAny.cuotaJulio ?? item.jul ?? 0);
       const agoVal = Number(itemAny.cuotaAgosto ?? item.ago ?? 0);
       const sepVal = Number(itemAny.cuotaSeptiembre ?? item.sep ?? 0);
@@ -51,39 +44,45 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       const novVal = Number(itemAny.cuotaNoviembre ?? item.nov ?? 0);
       const dicVal = Number(itemAny.cuotaDiciembre ?? item.dic ?? 0);
 
-      if (julVal > 0) entry.jul = Math.max(entry.jul, julVal);
-      if (agoVal > 0) entry.ago = Math.max(entry.ago, agoVal);
-      if (sepVal > 0) entry.sep = Math.max(entry.sep, sepVal);
-      if (octVal > 0) entry.oct = Math.max(entry.oct, octVal);
-      if (novVal > 0) entry.nov = Math.max(entry.nov, novVal);
-      if (dicVal > 0) entry.dic = Math.max(entry.dic, dicVal);
+      if (julVal > 0) entry.jul = 1;
+      if (agoVal > 0) entry.ago = 1;
+      if (sepVal > 0) entry.sep = 1;
+      if (octVal > 0) entry.oct = 1;
+      if (novVal > 0) entry.nov = 1;
+      if (dicVal > 0) entry.dic = 1;
 
+      // Respaldo por texto de fecha o mes
       const mesStr = String(item.mes || '').toUpperCase();
       const fecha = String(item.fechaPago || '');
-      
-      if (mesStr.includes('JULIO') || fecha.includes('/7/')) entry.jul = entry.jul || 1;
-      if (mesStr.includes('AGOSTO') || fecha.includes('/8/')) entry.ago = entry.ago || 1;
-      if (mesStr.includes('SEPTIEMBRE') || fecha.includes('/9/')) entry.sep = entry.sep || 1;
-      if (mesStr.includes('OCTUBRE') || fecha.includes('/10/')) entry.oct = entry.oct || 1;
-      if (mesStr.includes('NOVIEMBRE') || fecha.includes('/11/')) entry.nov = entry.nov || 1;
-      if (mesStr.includes('DICIEMBRE') || fecha.includes('/12/')) entry.dic = entry.dic || 1;
+      if (mesStr.includes('JULIO') || fecha.includes('/7/')) entry.jul = 1;
+      if (mesStr.includes('AGOSTO') || fecha.includes('/8/')) entry.ago = 1;
+      if (mesStr.includes('SEPTIEMBRE') || fecha.includes('/9/')) entry.sep = 1;
+      if (mesStr.includes('OCTUBRE') || fecha.includes('/10/')) entry.oct = 1;
+      if (mesStr.includes('NOVIEMBRE') || fecha.includes('/11/')) entry.nov = 1;
+      if (mesStr.includes('DICIEMBRE') || fecha.includes('/12/')) entry.dic = 1;
 
-      // Determinar el mes inicial cronológico del cliente
-      if (entry.jul > 0 && !entry.primerMes) entry.primerMes = 'JULIO';
-      if (entry.ago > 0 && !entry.primerMes) entry.primerMes = 'AGOSTO';
-      if (entry.sep > 0 && !entry.primerMes) entry.primerMes = 'SEPTIEMBRE';
-      if (entry.oct > 0 && !entry.primerMes) entry.primerMes = 'OCTUBRE';
-      if (entry.nov > 0 && !entry.primerMes) entry.primerMes = 'NOVIEMBRE';
-      if (entry.dic > 0 && !entry.primerMes) entry.primerMes = 'DICIEMBRE';
+      // Determinar mes inicial cronológico
+      if (!entry.mesInicial) {
+        if (entry.jul > 0) entry.mesInicial = 'JULIO';
+        else if (entry.ago > 0) entry.mesInicial = 'AGOSTO';
+        else if (entry.sep > 0) entry.mesInicial = 'SEPTIEMBRE';
+        else if (entry.oct > 0) entry.mesInicial = 'OCTUBRE';
+        else if (entry.nov > 0) entry.mesInicial = 'NOVIEMBRE';
+        else if (entry.dic > 0) entry.mesInicial = 'DICIEMBRE';
+        else entry.mesInicial = 'JULIO';
+      }
 
       if (item.fechaPago) entry.fechaPago = item.fechaPago;
-      if (item.estatus || item.statusPago) entry.estatus = item.estatus || item.statusPago;
+      
+      // Normalizar estatus para capturar variaciones en Firebase
+      const rawStatus = String(item.estatus || item.statusPago || 'Solvente').trim();
+      entry.estatus = rawStatus;
     });
 
     return Array.from(map.values());
   }, [asegurados]);
 
-  // Filtrado interactivo avanzado (Búsqueda, Banco, Estatus y Mes)
+  // Filtrado general interactivo (Búsqueda, Banco, Estatus y Pestaña de Mes)
   const filteredAsegurados = useMemo(() => {
     return consolidatedAsegurados.filter(item => {
       const nombre = item.nombreApellido ?? '';
@@ -98,25 +97,25 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
       const bancoItem = item.banco ?? '';
       const matchBanco = selectedBanco === 'TODOS' || bancoItem.toUpperCase() === selectedBanco.toUpperCase();
       
-      // Filtro de Estatus Interactivos
-      const estatusItem = String(item.estatus || item.statusPago || 'Solvente').toLowerCase();
+      // Filtrado robusto de estatus adaptado a los textos reales
+      const estatusLower = String(item.estatus || '').toLowerCase();
       let matchStatus = true;
       if (selectedStatus === 'Solventes') {
-        matchStatus = estatusItem.includes('solvente');
+        matchStatus = estatusLower.includes('solvente') || estatusLower === '';
       } else if (selectedStatus === 'Debe 1 Cuota') {
-        matchStatus = estatusItem.includes('1 cuota') || estatusItem.includes('debe 1');
+        matchStatus = estatusLower.includes('1 cuota') || estatusLower.includes('debe 1');
       } else if (selectedStatus === 'Debe + de 1 Cuota') {
-        matchStatus = estatusItem.includes('de 1 cuota') || estatusItem.includes('mas de 1') || estatusItem.includes('+ de 1');
+        matchStatus = estatusLower.includes('de 1 cuota') || estatusLower.includes('mas') || estatusLower.includes('+');
       }
 
-      // Filtro por pestañas de meses superiores
+      // Filtrado interactivo por pestañas de meses superiores
       let matchMonth = true;
-      if (selectedMonth === 'JULIO') matchMonth = item.jul > 0 || item.primerMes === 'JULIO';
-      if (selectedMonth === 'AGOSTO') matchMonth = item.ago > 0 || item.primerMes === 'AGOSTO';
-      if (selectedMonth === 'SEPTIEMBRE') matchMonth = item.sep > 0 || item.primerMes === 'SEPTIEMBRE';
-      if (selectedMonth === 'OCTUBRE') matchMonth = item.oct > 0 || item.primerMes === 'OCTUBRE';
-      if (selectedMonth === 'NOVIEMBRE') matchMonth = item.nov > 0 || item.primerMes === 'NOVIEMBRE';
-      if (selectedMonth === 'DICIEMBRE') matchMonth = item.dic > 0 || item.primerMes === 'DICIEMBRE';
+      if (selectedMonth === 'JULIO') matchMonth = item.mesInicial === 'JULIO' || item.jul > 0;
+      if (selectedMonth === 'AGOSTO') matchMonth = item.mesInicial === 'AGOSTO' || item.ago > 0;
+      if (selectedMonth === 'SEPTIEMBRE') matchMonth = item.mesInicial === 'SEPTIEMBRE' || item.sep > 0;
+      if (selectedMonth === 'OCTUBRE') matchMonth = item.mesInicial === 'OCTUBRE' || item.oct > 0;
+      if (selectedMonth === 'NOVIEMBRE') matchMonth = item.mesInicial === 'NOVIEMBRE' || item.nov > 0;
+      if (selectedMonth === 'DICIEMBRE') matchMonth = item.mesInicial === 'DICIEMBRE' || item.dic > 0;
 
       return matchSearch && matchBanco && matchStatus && matchMonth;
     });
@@ -130,12 +129,12 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({ asegurados, 
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {[
             { key: 'TODOS', label: 'TODOS', count: consolidatedAsegurados.length },
-            { key: 'JULIO', label: 'JULIO', count: consolidatedAsegurados.filter(i => i.jul > 0 || i.primerMes === 'JULIO').length },
-            { key: 'AGOSTO', label: 'AGOSTO', count: consolidatedAsegurados.filter(i => i.ago > 0 || i.primerMes === 'AGOSTO').length },
-            { key: 'SEPTIEMBRE', label: 'SEPTIEMBRE', count: consolidatedAsegurados.filter(i => i.sep > 0 || i.primerMes === 'SEPTIEMBRE').length },
-            { key: 'OCTUBRE', label: 'OCTUBRE', count: consolidatedAsegurados.filter(i => i.oct > 0 || i.primerMes === 'OCTUBRE').length },
-            { key: 'NOVIEMBRE', label: 'NOVIEMBRE', count: consolidatedAsegurados.filter(i => i.nov > 0 || i.primerMes === 'NOVIEMBRE').length },
-            { key: 'DICIEMBRE', label: 'DICIEMBRE', count: consolidatedAsegurados.filter(i => i.dic > 0 || i.primerMes === 'DICIEMBRE').length },
+            { key: 'JULIO', label: 'JULIO', count: consolidatedAsegurados.filter(i => i.mesInicial === 'JULIO' || i.jul > 0).length },
+            { key: 'AGOSTO', label: 'AGOSTO', count: consolidatedAsegurados.filter(i => i.mesInicial === 'AGOSTO' || i.ago > 0).length },
+            { key: 'SEPTIEMBRE', label: 'SEPTIEMBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'SEPTIEMBRE' || i.sep > 0).length },
+            { key: 'OCTUBRE', label: 'OCTUBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'OCTUBRE' || i.oct > 0).length },
+            { key: 'NOVIEMBRE', label: 'NOVIEMBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'NOVIEMBRE' || i.nov > 0).length },
+            { key: 'DICIEMBRE', label: 'DICIEMBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'DICIEMBRE' || i.dic > 0).length },
           ].map(tab => (
             <button
               key={tab.key}
