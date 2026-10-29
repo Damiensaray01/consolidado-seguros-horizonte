@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Asegurado } from '../types';
-import { Search, ExternalLink, Filter, FileSpreadsheet, Calendar, Download, Edit3, X, Check, Plus } from 'lucide-react';
+import { Search, ExternalLink, Filter, FileSpreadsheet, Calendar, Download, Edit3, X, Plus } from 'lucide-react';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import * as XLSX from 'xlsx';
@@ -13,7 +13,8 @@ interface PaymentsTableProps {
   onTabChange?: (tab: string) => void;
 }
 
-const MESES = ['TODOS', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+// Limitamos las pestañas principales de gestión activa hasta Octubre
+const MESES = ['TODOS', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE'];
 const MESES_ORDENADOS = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
 const CEDULAS_JULIO_FORZADAS = new Set([
@@ -42,7 +43,6 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     fechaPago: new Date().toISOString().split('T')[0],
   });
 
-  // Función robusta para extraer el número de la columna NUMERO o sus variantes
   const formatTelefono = (item: any) => {
     if (!item) return '-';
     const val = item.NUMERO || item.numero || item.Telefono || item.telefono || item.celular || item.phone || '';
@@ -213,8 +213,18 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         };
       })
       .sort((a, b) => {
-        const dateA = a.fechaPago ? new Date(a.fechaPago).getTime() : 0;
-        const dateB = b.fechaPago ? new Date(b.fechaPago).getTime() : 0;
+        const parsearFecha = (fechaStr: string) => {
+          if (!fechaStr || fechaStr === '-') return 0;
+          if (fechaStr.includes('/')) {
+            const [dia, mes, anio] = fechaStr.split('/');
+            return new Date(`${anio}-${mes}-${dia}`).getTime() || 0;
+          }
+          const timestamp = new Date(fechaStr).getTime();
+          return isNaN(timestamp) ? 0 : timestamp;
+        };
+
+        const dateA = parsearFecha(a.fechaPago);
+        const dateB = parsearFecha(b.fechaPago);
         return dateB - dateA;
       });
   }, [asegurados]);
@@ -402,11 +412,11 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
       }}
     >
-      {/* Selector de Meses */}
+      {/* Selector de Meses Activos */}
       <div
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
+          justify: 'space-between',
           alignItems: 'center',
           padding: '0.75rem 1rem 0 1rem',
           borderBottom: '1px solid #e2e8f0',
@@ -487,7 +497,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         </button>
       </div>
 
-      {/* Botonera Interactiva de Filtro Rápido por Estatus de Gestión */}
+      {/* Botonera de Filtro Rápido por Estatus */}
       <div
         style={{
           display: 'flex',
@@ -540,7 +550,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
           borderBottom: '1px solid #e2e8f0',
           backgroundColor: '#ffffff',
           display: 'flex',
-          justifyContent: 'space-between',
+          justify: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: '0.75rem',
@@ -623,7 +633,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         </div>
       </div>
 
-      {/* Tabla Principal reorganizada (Cédula y Teléfono juntos para eliminar espacios) */}
+      {/* Tabla Principal */}
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.75rem', color: '#334155' }}>
           <thead>
@@ -799,31 +809,48 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
                   onChange={(e) => setFormData({ ...formData, mes: e.target.value })}
                   style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', padding: '0.4rem', borderRadius: '0.375rem', marginTop: '0.2rem', boxSizing: 'border-box' }}
                 >
-                  {MESES.filter(m => m !== 'TODOS').map((m) => (
+                  {MESES_ORDENADOS.map((m) => (
                     <option key={m} value={m}>{m}</option>
                   ))}
                 </select>
               </div>
 
-              <div>
-                <label style={{ color: '#64748b', fontWeight: 600 }}>Cuota ($ USD)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.uds || 5.99}
-                  onChange={(e) => setFormData({ ...formData, uds: parseFloat(e.target.value) || 5.99 })}
-                  style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', padding: '0.4rem', borderRadius: '0.375rem', marginTop: '0.2rem', boxSizing: 'border-box' }}
-                />
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ color: '#64748b', fontWeight: 600 }}>Cuota ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.uds || 5.99}
+                    onChange={(e) => setFormData({ ...formData, uds: parseFloat(e.target.value) || 5.99 })}
+                    style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', padding: '0.4rem', borderRadius: '0.375rem', marginTop: '0.2rem', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ color: '#64748b', fontWeight: 600 }}>Fecha Pago</label>
+                  <input
+                    type="date"
+                    value={formData.fechaPago || ''}
+                    onChange={(e) => setFormData({ ...formData, fechaPago: e.target.value })}
+                    style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', padding: '0.4rem', borderRadius: '0.375rem', marginTop: '0.2rem', boxSizing: 'border-box' }}
+                  />
+                </div>
               </div>
-            </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.25rem' }}>
-              <button onClick={() => setModalMode(null)} style={{ backgroundColor: '#e2e8f0', color: '#334155', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: 600 }}>
-                Cancelar
-              </button>
-              <button onClick={guardarRegistroModal} style={{ backgroundColor: '#0284c7', color: '#ffffff', fontWeight: 700, border: 'none', padding: '0.4rem 0.8rem', borderRadius: '0.375rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                <Check size={14} /> Guardar
-              </button>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+                <button
+                  onClick={() => setModalMode(null)}
+                  style={{ backgroundColor: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1', padding: '0.4rem 0.8rem', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={guardarRegistroModal}
+                  style={{ backgroundColor: '#0284c7', color: '#ffffff', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  Guardar
+                </button>
+              </div>
             </div>
           </div>
         </div>
