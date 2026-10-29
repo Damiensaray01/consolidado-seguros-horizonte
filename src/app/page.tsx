@@ -1,10 +1,11 @@
 ﻿'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Asegurado } from '@/types';
 import { Header } from '@/components/Header';
+import { KpiCards } from '@/components/KpiCards';
 import { RecurrenceMatrix } from '@/components/RecurrenceMatrix';
 import { ReceiptModal } from '@/components/ReceiptModal';
 import { NewPaymentModal } from '@/components/NewPaymentModal';
@@ -33,15 +34,59 @@ export default function Home() {
     return () => unsubscribe();
   }, [isAuthenticated]);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (username === 'ADMBiartet' && password === 'ADM2026') {
-      setIsAuthenticated(true);
-      setLoginError(false);
-    } else {
-      setLoginError(true);
-    }
-  };
+  // Consolidación idéntica para alimentar las tarjetas KPI en tiempo real
+  const consolidatedAsegurados = useMemo(() => {
+    const map = new Map<string, any>();
+    asegurados.forEach(item => {
+      const key = String(item.cedula || item.nombreApellido || Math.random()).trim();
+      if (!map.has(key)) {
+        map.set(key, { ...item, jul: 0, ago: 0, sep: 0, oct: 0, nov: 0, dic: 0 });
+      }
+      const entry = map.get(key)!;
+      const itemAny = item as any;
+
+      const julVal = Number(itemAny.cuotaJulio || (item.mes?.toUpperCase().includes('JULIO') ? 1 : 0) || (item.jul || 0));
+      const agoVal = Number(itemAny.cuotaAgosto || (item.mes?.toUpperCase().includes('AGOSTO') ? 1 : 0) || (item.ago || 0));
+      const sepVal = Number(itemAny.cuotaSeptiembre || (item.mes?.toUpperCase().includes('SEPTIEMBRE') ? 1 : 0) || (item.sep || 0));
+      const octVal = Number(itemAny.cuotaOctubre || (item.mes?.toUpperCase().includes('OCTUBRE') ? 1 : 0) || (item.oct || 0));
+
+      if (julVal > 0) entry.jul = 1;
+      if (agoVal > 0) entry.ago = 1;
+      if (sepVal > 0) entry.sep = 1;
+      if (octVal > 0) entry.oct = 1;
+
+      const fecha = String(item.fechaPago || '');
+      if (fecha.includes('/7/2026') || fecha.startsWith('7/')) entry.jul = 1;
+      if (fecha.includes('/8/2026') || fecha.startsWith('8/')) entry.ago = 1;
+      if (fecha.includes('/9/2026') || fecha.startsWith('9/')) entry.sep = 1;
+      if (fecha.includes('/10/2026') || fecha.startsWith('10/')) entry.oct = 1;
+    });
+
+    return Array.from(map.values()).map(client => {
+      let mesInicial = 'JULIO';
+      if (client.jul === 1) mesInicial = 'JULIO';
+      else if (client.ago === 1) mesInicial = 'AGOSTO';
+      else if (client.sep === 1) mesInicial = 'SEPTIEMBRE';
+      else if (client.oct === 1) mesInicial = 'OCTUBRE';
+
+      const mesesEvaluar = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE'];
+      const startIndex = mesesEvaluar.indexOf(mesInicial);
+      let cuotasDebidas = 0;
+
+      if (startIndex !== -1) {
+        const valores = [client.jul, client.ago, client.sep, client.oct];
+        for (let i = startIndex; i < valores.length; i++) {
+          if (valores[i] === 0) cuotasDebidas++;
+        }
+      }
+
+      let estatusCalculado = 'Solvente';
+      if (cuotasDebidas === 1) estatusCalculado = 'Debe 1 Cuota';
+      else if (cuotasDebidas > 1) estatusCalculado = `Debe ${cuotasDebidas} Cuotas`;
+
+      return { ...client, mesInicial, estatusCalculado, cuotasDebidas };
+    });
+  }, [asegurados]);
 
   if (!isAuthenticated) {
     return (
@@ -50,26 +95,14 @@ export default function Home() {
           <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', textAlign: 'center' }}>Seguros Horizonte</h2>
           <p style={{ margin: '0 0 1.5rem', fontSize: '0.8rem', color: '#64748b', textAlign: 'center' }}>Gestión Operativa • Business Intelligence</p>
           
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <form onSubmit={(e) => { e.preventDefault(); if (username === 'ADMBiartet' && password === 'ADM2026') { setIsAuthenticated(true); setLoginError(false); } else { setLoginError(true); } }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div>
               <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>Usuario</label>
-              <input 
-                type="text" 
-                required 
-                value={username} 
-                onChange={e => setUsername(e.target.value)} 
-                style={{ width: '100%', padding: '0.5rem', borderRadius: '0.3rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', marginTop: '0.2rem' }} 
-              />
+              <input type="text" required value={username} onChange={e => setUsername(e.target.value)} style={{ width: '100%', padding: '0.5rem', borderRadius: '0.3rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', marginTop: '0.2rem' }} />
             </div>
             <div>
               <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>Contraseña</label>
-              <input 
-                type="password" 
-                required 
-                value={password} 
-                onChange={e => setPassword(e.target.value)} 
-                style={{ width: '100%', padding: '0.5rem', borderRadius: '0.3rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', marginTop: '0.2rem' }} 
-              />
+              <input type="password" required value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', padding: '0.5rem', borderRadius: '0.3rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', marginTop: '0.2rem' }} />
             </div>
             {loginError && <p style={{ color: '#dc2626', fontSize: '0.75rem', margin: 0, textAlign: 'center' }}>Credenciales incorrectas.</p>}
             <button type="submit" style={{ backgroundColor: '#0284c7', color: '#fff', border: 'none', padding: '0.6rem', borderRadius: '0.3rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', marginTop: '0.5rem' }}>
@@ -85,6 +118,7 @@ export default function Home() {
     <main style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
       <Header onLogout={() => setIsAuthenticated(false)} />
       <div style={{ padding: '1.5rem', maxWidth: '1400px', margin: '0 auto' }}>
+        <KpiCards asegurados={consolidatedAsegurados} />
         <RecurrenceMatrix 
           asegurados={asegurados} 
           onSelectAsegurado={(item) => setSelectedAsegurado(item)} 
@@ -92,15 +126,8 @@ export default function Home() {
         />
       </div>
 
-      <ReceiptModal 
-        asegurado={selectedAsegurado} 
-        onClose={() => setSelectedAsegurado(null)} 
-      />
-
-      <NewPaymentModal 
-        isOpen={isNewModalOpen} 
-        onClose={() => setIsNewModalOpen(false)} 
-      />
+      <ReceiptModal asegurado={selectedAsegurado} onClose={() => setSelectedAsegurado(null)} />
+      <NewPaymentModal isOpen={isNewModalOpen} onClose={() => setIsNewModalOpen(false)} />
     </main>
   );
 }
