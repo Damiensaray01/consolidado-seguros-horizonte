@@ -13,7 +13,7 @@ interface PaymentsTableProps {
   onTabChange?: (tab: string) => void;
 }
 
-// Limitamos las pestañas principales de gestión activa hasta Octubre
+// Pestañas de meses activos limitadas hasta Octubre
 const MESES = ['TODOS', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE'];
 const MESES_ORDENADOS = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
@@ -22,7 +22,7 @@ const CEDULAS_JULIO_FORZADAS = new Set([
   '18501572', '18003787', '25847994', '27163228', '9609349',
   '12174446', '14652892', '11931380', '7793727', '25894713',
   '7662055', '11555269', '14652893', '14884967', '28443208',
-  '10000106', '5831725', '31217211', '32266111'
+  '10000106', '5831725', '31217211', '32266111', '19228712'
 ]);
 
 export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSelectAsegurado, onTabChange }) => {
@@ -121,6 +121,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
     }
   };
 
+  // Consolidación de registros por Cédula asegurando que el mes inicial sea el primer pago cronológico
   const aseguradosConsolidados = useMemo(() => {
     const mapa = new Map<
       string,
@@ -139,22 +140,11 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
       const mesDesdeFecha = obtenerMesDesdeFecha(item.fechaPago);
       let mesItem = (mesDesdeFecha || item.mes || 'JULIO').toUpperCase().trim();
 
-      if (CEDULAS_JULIO_FORZADAS.has(cedulaStr)) {
-        mesItem = 'JULIO';
-      }
-
       const montoUSD = parseMontoUSD(item.uds);
 
       if (!mapa.has(cedulaKey)) {
         const mesesAsignados = new Set<string>();
         if (mesItem) mesesAsignados.add(mesItem);
-
-        if (cedulaStr === '10000106') {
-          mesesAsignados.add('JULIO');
-          mesesAsignados.add('AGOSTO');
-          mesesAsignados.add('SEPTIEMBRE');
-          mesesAsignados.add('OCTUBRE');
-        }
 
         mapa.set(cedulaKey, {
           ...item,
@@ -162,20 +152,13 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
           cedulaTrim: cedulaStr,
           mesesPagados: mesesAsignados,
           montoCuotaReal: montoUSD > 10 ? 5.99 : montoUSD,
-          mesInicial: CEDULAS_JULIO_FORZADAS.has(cedulaStr) ? 'JULIO' : mesItem,
+          mesInicial: mesItem,
           fechasPagos: item.fechaPago ? [item.fechaPago] : [],
         });
       } else {
         const existente = mapa.get(cedulaKey)!;
         if (mesItem) {
           existente.mesesPagados.add(mesItem);
-        }
-
-        if (cedulaStr === '10000106') {
-          existente.mesesPagados.add('JULIO');
-          existente.mesesPagados.add('AGOSTO');
-          existente.mesesPagados.add('SEPTIEMBRE');
-          existente.mesesPagados.add('OCTUBRE');
         }
 
         if (item.fechaPago) {
@@ -195,21 +178,25 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
           return { ...item, mesInicial: 'JULIO' };
         }
 
-        let fechaMasAntigua = item.fechaPago;
+        // Encontrar la fecha más antigua registrada para este asegurado para fijar su mes inicial correcto
+        let mesAsignado = item.mesInicial;
         if (item.fechasPagos.length > 0) {
           const fechasOrdenadas = item.fechasPagos.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-          fechaMasAntigua = fechasOrdenadas[0];
+          const mesAntiguo = obtenerMesDesdeFecha(fechasOrdenadas[0]);
+          if (mesAntiguo) {
+            mesAsignado = mesAntiguo;
+          }
+        } else {
+          // Si no hay fechas exactas, buscar el primer mes cronológico presente en sus meses pagados
+          const primerMesEncontrado = MESES_ORDENADOS.find((m) => item.mesesPagados.has(m));
+          if (primerMesEncontrado) {
+            mesAsignado = primerMesEncontrado;
+          }
         }
-
-        const mesDesdeFechaInicial = obtenerMesDesdeFecha(fechaMasAntigua);
-        const primerMes =
-          mesDesdeFechaInicial ||
-          MESES_ORDENADOS.find((m) => item.mesesPagados.has(m)) ||
-          item.mesInicial;
 
         return {
           ...item,
-          mesInicial: primerMes,
+          mesInicial: mesAsignado,
         };
       })
       .sort((a, b) => {
@@ -225,7 +212,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
 
         const dateA = parsearFecha(a.fechaPago);
         const dateB = parsearFecha(b.fechaPago);
-        return dateB - dateA;
+        return dateB - dateA; // Orden descendente: pago más reciente arriba
       });
   }, [asegurados]);
 
@@ -412,11 +399,11 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
       }}
     >
-      {/* Selector de Meses Activos */}
+      {/* Pestañas de Meses Activos */}
       <div
         style={{
           display: 'flex',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center',
           padding: '0.75rem 1rem 0 1rem',
           borderBottom: '1px solid #e2e8f0',
@@ -497,7 +484,7 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         </button>
       </div>
 
-      {/* Botonera de Filtro Rápido por Estatus */}
+      {/* Filtro Rápido por Estatus */}
       <div
         style={{
           display: 'flex',
@@ -543,14 +530,14 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ asegurados, onSele
         })}
       </div>
 
-      {/* Filtros de Búsqueda y Acciones */}
+      {/* Buscador y Acciones */}
       <div
         style={{
           padding: '1rem',
           borderBottom: '1px solid #e2e8f0',
           backgroundColor: '#ffffff',
           display: 'flex',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: '0.75rem',
