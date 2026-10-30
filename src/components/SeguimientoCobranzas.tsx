@@ -55,7 +55,6 @@ export const SeguimientoCobranzas: React.FC<SeguimientoCobranzasProps> = ({ aseg
       const idxGestion = indexMap[mesGestion];
 
       mesesCols.forEach((mCol, idxCol) => {
-        // La recurrencia solo aplica estrictamente a partir del mes siguiente al mes de emisión (idxCol > idxGestion)
         if (idxCol <= idxGestion) {
           recurrenciaCounts[mCol] = 0;
           recurrenciaMontos[mCol] = 0;
@@ -126,12 +125,12 @@ export const SeguimientoCobranzas: React.FC<SeguimientoCobranzasProps> = ({ aseg
                   ))}
                 </tr>
 
-                {/* Fila Recurrencia */}
+                {/* Fila Recurrencia (Estrictamente columnas posteriores al mes de gestion) */}
                 <tr style={{ borderBottom: '1px dashed #cbd5e1' }}>
                   <td style={{ textAlign: 'left', padding: '0.4rem 0.8rem', fontWeight: 600, border: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>Recurrencia</td>
                   {mesesList.map((m, i) => (
                     <td key={m} style={{ border: '1px solid #cbd5e1' }}>
-                      {i > row.idxGestion ? row.recurrenciaCounts[m] : '-'}
+                      {i > row.idxGestion ? (row.recurrenciaCounts[m] || 0) : '-'}
                     </td>
                   ))}
                 </tr>
@@ -146,13 +145,13 @@ export const SeguimientoCobranzas: React.FC<SeguimientoCobranzasProps> = ({ aseg
                   ))}
                 </tr>
 
-                {/* Fila Monto $ Recurrencia */}
+                {/* Fila Monto $ Recurrencia (Estrictamente columnas posteriores al mes de gestion) */}
                 <tr style={{ borderBottom: '2px solid #94a3b8' }}>
                   <td style={{ textAlign: 'left', padding: '0.4rem 0.8rem', fontWeight: 600, border: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>Monto $ Recurrencia</td>
                   {mesesList.map((m, i) => {
                     const montoRec = row.recurrenciaMontos[m] || 0;
                     return (
-                      <td key={m} style={{ border: '1px solid #cbd5e1', fontWeight: 600, color: i > row.idxGestion && montoRec > 0 ? '#16a34a' : '#64748b' }}>
+                      <td key={m} style={{ border: '1px solid #cbd5e1', fontWeight: 600, color: i > row.idxGestion ? '#16a34a' : '#64748b' }}>
                         {i > row.idxGestion ? `$${montoRec.toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '-'}
                       </td>
                     );
