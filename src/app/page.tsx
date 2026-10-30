@@ -103,7 +103,7 @@ export default function Home() {
       }}>
         <div style={{ backgroundColor: '#ffffff', padding: '2.5rem 2rem', borderRadius: '1rem', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', width: '380px', textAlign: 'center', boxSizing: 'border-box', border: '1px solid #e2e8f0' }}>
           <div style={{ marginBottom: '1.2rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <img src="https://upload.wikimedia.org/wikipedia/commons/4/45/Seguros_Horizonte_logo.png" alt="Seguros Horizonte" style={{ height: '40px', objectFit: 'contain' }} />
+            <img src="https://upload.wikimedia.org/wikipedia/commons/4/45/Seguros_Horizonte_logo2.png" alt="Seguros Horizonte" style={{ height: '40px', objectFit: 'contain' }} />
           </div>
           <h2 style={{ margin: '0 0 0.2rem', fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', lineHeight: '1.3' }}>
             Consolidado de Pagos Cobranzas - Seguros Horizonte
