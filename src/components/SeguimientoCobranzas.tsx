@@ -11,6 +11,7 @@ export const SeguimientoCobranzas: React.FC<SeguimientoCobranzasProps> = ({ aseg
   const dataSeguimiento = useMemo(() => {
     const mesesCols = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
     const gestionMeses = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE'];
+    const indexMap: { [key: string]: number } = { 'JULIO': 0, 'AGOSTO': 1, 'SEPTIEMBRE': 2, 'OCTUBRE': 3, 'NOVIEMBRE': 4, 'DICIEMBRE': 5 };
 
     const clientMap = new Map<string, any>();
 
@@ -51,7 +52,16 @@ export const SeguimientoCobranzas: React.FC<SeguimientoCobranzasProps> = ({ aseg
       const recurrenciaCounts: { [key: string]: number } = {};
       const recurrenciaMontos: { [key: string]: number } = {};
 
-      mesesCols.forEach(mCol => {
+      const idxGestion = indexMap[mesGestion];
+
+      mesesCols.forEach((mCol, idxCol) => {
+        // La recurrencia solo aplica estrictamente a partir del mes siguiente al mes de emisión (idxCol > idxGestion)
+        if (idxCol <= idxGestion) {
+          recurrenciaCounts[mCol] = 0;
+          recurrenciaMontos[mCol] = 0;
+          return;
+        }
+
         let count = 0;
         let monto = 0;
         clientesEmision.forEach(c => {
@@ -70,7 +80,8 @@ export const SeguimientoCobranzas: React.FC<SeguimientoCobranzasProps> = ({ aseg
         cantEmision,
         montoEmision,
         recurrenciaCounts,
-        recurrenciaMontos
+        recurrenciaMontos,
+        idxGestion
       };
     });
   }, [asegurados]);
@@ -96,49 +107,56 @@ export const SeguimientoCobranzas: React.FC<SeguimientoCobranzasProps> = ({ aseg
         </thead>
         <tbody>
           {dataSeguimiento.map((row) => {
-            const bgMes = row.mes === 'JULIO' ? '#3b82f6' : row.mes === 'AGOSTO' ? '#eab308' : '#0f172a';
+            const bgMes = row.mes === 'JULIO' ? '#3b82f6' : row.mes === 'AGOSTO' ? '#eab308' : row.mes === 'SEPTIEMBRE' ? '#0f172a' : '#1e293b';
             const colorTextoMes = row.mes === 'AGOSTO' ? '#000' : '#fff';
+            const mesesList = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
             return (
               <React.Fragment key={row.mes}>
+                {/* Fila Emision */}
                 <tr style={{ borderBottom: '1px dashed #cbd5e1' }}>
                   <td rowSpan={4} style={{ backgroundColor: bgMes, color: colorTextoMes, fontWeight: 700, border: '1px solid #cbd5e1', verticalAlign: 'middle', fontSize: '0.85rem' }}>
                     {row.mes.charAt(0) + row.mes.slice(1).toLowerCase()}
                   </td>
                   <td style={{ textAlign: 'left', padding: '0.4rem 0.8rem', fontWeight: 600, border: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>Emision</td>
-                  <td style={{ border: '1px solid #cbd5e1' }}>{row.mes === 'JULIO' ? row.cantEmision : '-'}</td>
-                  <td style={{ border: '1px solid #cbd5e1' }}>{row.mes === 'AGOSTO' ? row.cantEmision : '-'}</td>
-                  <td style={{ border: '1px solid #cbd5e1' }}>{row.mes === 'SEPTIEMBRE' ? row.cantEmision : '-'}</td>
-                  <td style={{ border: '1px solid #cbd5e1' }}>{row.mes === 'OCTUBRE' ? row.cantEmision : '-'}</td>
-                  <td style={{ border: '1px solid #cbd5e1' }}>-</td>
-                  <td style={{ border: '1px solid #cbd5e1' }}>-</td>
+                  {mesesList.map((m, i) => (
+                    <td key={m} style={{ border: '1px solid #cbd5e1' }}>
+                      {i === row.idxGestion ? row.cantEmision : '-'}
+                    </td>
+                  ))}
                 </tr>
+
+                {/* Fila Recurrencia */}
                 <tr style={{ borderBottom: '1px dashed #cbd5e1' }}>
                   <td style={{ textAlign: 'left', padding: '0.4rem 0.8rem', fontWeight: 600, border: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>Recurrencia</td>
-                  <td style={{ border: '1px solid #cbd5e1' }}>{row.recurrenciaCounts['JULIO'] || 0}</td>
-                  <td style={{ border: '1px solid #cbd5e1' }}>{row.recurrenciaCounts['AGOSTO'] || 0}</td>
-                  <td style={{ border: '1px solid #cbd5e1' }}>{row.recurrenciaCounts['SEPTIEMBRE'] || 0}</td>
-                  <td style={{ border: '1px solid #cbd5e1' }}>{row.recurrenciaCounts['OCTUBRE'] || 0}</td>
-                  <td style={{ border: '1px solid #cbd5e1' }}>{row.recurrenciaCounts['NOVIEMBRE'] || 0}</td>
-                  <td style={{ border: '1px solid #cbd5e1' }}>{row.recurrenciaCounts['DICIEMBRE'] || 0}</td>
+                  {mesesList.map((m, i) => (
+                    <td key={m} style={{ border: '1px solid #cbd5e1' }}>
+                      {i > row.idxGestion ? row.recurrenciaCounts[m] : '-'}
+                    </td>
+                  ))}
                 </tr>
+
+                {/* Fila Monto $ Emision */}
                 <tr style={{ borderBottom: '1px dashed #cbd5e1' }}>
                   <td style={{ textAlign: 'left', padding: '0.4rem 0.8rem', fontWeight: 600, border: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>Monto $ Emision</td>
-                  <td style={{ border: '1px solid #cbd5e1', fontWeight: 600 }}>{row.mes === 'JULIO' && row.montoEmision > 0 ? `$${row.montoEmision.toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '-'}</td>
-                  <td style={{ border: '1px solid #cbd5e1', fontWeight: 600 }}>{row.mes === 'AGOSTO' && row.montoEmision > 0 ? `$${row.montoEmision.toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '-'}</td>
-                  <td style={{ border: '1px solid #cbd5e1', fontWeight: 600 }}>{row.mes === 'SEPTIEMBRE' && row.montoEmision > 0 ? `$${row.montoEmision.toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '-'}</td>
-                  <td style={{ border: '1px solid #cbd5e1', fontWeight: 600 }}>{row.mes === 'OCTUBRE' && row.montoEmision > 0 ? `$${row.montoEmision.toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '-'}</td>
-                  <td style={{ border: '1px solid #cbd5e1' }}>-</td>
-                  <td style={{ border: '1px solid #cbd5e1' }}>-</td>
+                  {mesesList.map((m, i) => (
+                    <td key={m} style={{ border: '1px solid #cbd5e1', fontWeight: 600 }}>
+                      {i === row.idxGestion && row.montoEmision > 0 ? `$${row.montoEmision.toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '-'}
+                    </td>
+                  ))}
                 </tr>
+
+                {/* Fila Monto $ Recurrencia */}
                 <tr style={{ borderBottom: '2px solid #94a3b8' }}>
                   <td style={{ textAlign: 'left', padding: '0.4rem 0.8rem', fontWeight: 600, border: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>Monto $ Recurrencia</td>
-                  <td style={{ border: '1px solid #cbd5e1', fontWeight: 600, color: '#16a34a' }}>${(row.recurrenciaMontos['JULIO'] || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</td>
-                  <td style={{ border: '1px solid #cbd5e1', fontWeight: 600, color: '#16a34a' }}>${(row.recurrenciaMontos['AGOSTO'] || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</td>
-                  <td style={{ border: '1px solid #cbd5e1', fontWeight: 600, color: '#16a34a' }}>${(row.recurrenciaMontos['SEPTIEMBRE'] || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</td>
-                  <td style={{ border: '1px solid #cbd5e1', fontWeight: 600, color: '#16a34a' }}>${(row.recurrenciaMontos['OCTUBRE'] || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</td>
-                  <td style={{ border: '1px solid #cbd5e1', fontWeight: 600, color: '#16a34a' }}>${(row.recurrenciaMontos['NOVIEMBRE'] || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</td>
-                  <td style={{ border: '1px solid #cbd5e1', fontWeight: 600, color: '#16a34a' }}>${(row.recurrenciaMontos['DICIEMBRE'] || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</td>
+                  {mesesList.map((m, i) => {
+                    const montoRec = row.recurrenciaMontos[m] || 0;
+                    return (
+                      <td key={m} style={{ border: '1px solid #cbd5e1', fontWeight: 600, color: i > row.idxGestion && montoRec > 0 ? '#16a34a' : '#64748b' }}>
+                        {i > row.idxGestion ? `$${montoRec.toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '-'}
+                      </td>
+                    );
+                  })}
                 </tr>
               </React.Fragment>
             );
