@@ -66,19 +66,18 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       const fecha = String(item.fechaPago || '');
       const cuotasPagadas = Number(itemAny.cuotasPagadas || 1);
 
-      let startIndex = 9; // Octubre por defecto
-      if (mesTexto.includes('JULIO') || fecha.includes('/7/')) startIndex = 6;
-      else if (mesTexto.includes('AGOSTO') || fecha.includes('/8/')) startIndex = 7;
-      else if (mesTexto.includes('SEPTIEMBRE') || fecha.includes('/9/')) startIndex = 8;
-      else if (mesTexto.includes('OCTUBRE') || fecha.includes('/10/')) startIndex = 9;
-      else if (mesTexto.includes('NOVIEMBRE') || fecha.includes('/11/')) startIndex = 10;
-      else if (mesTexto.includes('DICIEMBRE') || fecha.includes('/12/')) startIndex = 11;
+      let startIndex = 3; // Octubre por defecto
+      if (mesTexto.includes('JULIO') || fecha.includes('/7/')) startIndex = 0;
+      else if (mesTexto.includes('AGOSTO') || fecha.includes('/8/')) startIndex = 1;
+      else if (mesTexto.includes('SEPTIEMBRE') || fecha.includes('/9/')) startIndex = 2;
+      else if (mesTexto.includes('OCTUBRE') || fecha.includes('/10/')) startIndex = 3;
+      else if (mesTexto.includes('NOVIEMBRE') || fecha.includes('/11/')) startIndex = 4;
+      else if (mesTexto.includes('DICIEMBRE') || fecha.includes('/12/')) startIndex = 5;
 
       const keysMeses = ['jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-      // Mapear cuotas múltiples o individuales
       for (let i = 0; i < cuotasPagadas; i++) {
-        const target = startIndex - 6 + i; // Ajustado al rango de jul a dic
-        if (target >= 0 && target < keysMeses.length) {
+        const target = startIndex + i;
+        if (target < keysMeses.length) {
           entry[keysMeses[target]] = 1;
         }
       }
