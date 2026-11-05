@@ -46,45 +46,45 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
     if (onMonthFilterChange) onMonthFilterChange(month);
   };
 
-  // Consolidación final y absoluta por Cédula para garantizar una sola fila por persona en la UI
-  const consolidatedRows = useMemo(() => {
+  // Consolidación estricta y blindada por Cédula para la vista tabular
+  const uniqueRows = useMemo(() => {
     const map = new Map<string, any>();
     const mesesNombres = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
     asegurados.forEach(item => {
-      const cedulaKey = String(item.cedula || '').trim();
+      let cedulaKey = String(item.cedula || '').trim();
+      const idPart = String(item.id || '');
+      
+      if (!cedulaKey && idPart.includes('_')) {
+        cedulaKey = idPart.split('_')[0].trim();
+      }
+      if (!cedulaKey) cedulaKey = String(item.nombreApellido || 'N/D').trim();
       if (!cedulaKey) return;
 
       if (!map.has(cedulaKey)) {
         map.set(cedulaKey, {
           ...item,
-          jul: Number(item.jul) || 0,
-          ago: Number(item.ago) || 0,
-          sep: Number(item.sep) || 0,
-          oct: Number(item.oct) || 0,
-          nov: Number(item.nov) || 0,
-          dic: Number(item.dic) || 0,
-          mesInicial: item.mesInicial || 'JULIO',
+          cedula: cedulaKey,
+          jul: 0, ago: 0, sep: 0, oct: 0, nov: 0, dic: 0,
+          mesInicial: 'JULIO',
           fechaPago: item.fechaPago || '-'
         });
       }
 
       const entry = map.get(cedulaKey)!;
 
-      // Fusionar marcas de meses si vienen de diferentes registros
-      if (Number(item.jul) > 0) entry.jul = 1;
-      if (Number(item.ago) > 0) entry.ago = 1;
-      if (Number(item.sep) > 0) entry.sep = 1;
-      if (Number(item.oct) > 0) entry.oct = 1;
-      if (Number(item.nov) > 0) entry.nov = 1;
-      if (Number(item.dic) > 0) entry.dic = 1;
+      // Fusionar los meses pagados
+      if (Number(item.jul) > 0 || Number((item as any).cuotaJulio) > 0) entry.jul = 1;
+      if (Number(item.ago) > 0 || Number((item as any).cuotaAgosto) > 0) entry.ago = 1;
+      if (Number(item.sep) > 0 || Number((item as any).cuotaSeptiembre) > 0) entry.sep = 1;
+      if (Number(item.oct) > 0 || Number((item as any).cuotaOctubre) > 0) entry.oct = 1;
+      if (Number(item.nov) > 0 || Number((item as any).cuotaNoviembre) > 0) entry.nov = 1;
+      if (Number(item.dic) > 0 || Number((item as any).cuotaDiciembre) > 0) entry.dic = 1;
 
       const fecha = String(item.fechaPago || '');
-      const itemAny = item as any;
       const mesTexto = String(item.mes || '').toUpperCase();
-      const cuotasPagadas = Number(itemAny.cuotasPagadas || 1);
-
       let startIndex = -1;
+
       if (fecha.includes('/7/')) startIndex = 6;
       else if (fecha.includes('/8/')) startIndex = 7;
       else if (fecha.includes('/9/')) startIndex = 8;
@@ -95,17 +95,11 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         startIndex = mesesNombres.findIndex(m => mesTexto.includes(m));
       }
 
-      if (startIndex !== -1) {
+      if (startIndex >= 6 && startIndex < 12) {
         const matrixKeys = ['jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-        for (let i = 0; i < cuotasPagadas; i++) {
-          const targetIndex = startIndex + i;
-          if (targetIndex >= 6 && targetIndex < 12) {
-            entry[matrixKeys[targetIndex - 6]] = 1;
-          }
-        }
+        entry[matrixKeys[startIndex - 6]] = 1;
       }
 
-      // Guardar la fecha de pago más antigua como la fecha de emisión inicial
       const parseDate = (d: string) => {
         if (!d || d === '-') return 0;
         const p = d.split('/');
@@ -118,6 +112,11 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       if (itemFechaTime > 0 && (currentFechaTime === 0 || itemFechaTime < currentFechaTime)) {
         entry.fechaPago = item.fechaPago;
       }
+
+      if (item.banco) entry.banco = item.banco;
+      if (item.uds) entry.uds = item.uds;
+      if (item.nombreApellido) entry.nombreApellido = item.nombreApellido;
+      if (item.telefono) entry.telefono = item.telefono;
     });
 
     return Array.from(map.values()).map(client => {
@@ -165,7 +164,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
   }, [asegurados]);
 
   const filteredAsegurados = useMemo(() => {
-    let result = consolidatedRows.filter(item => {
+    let result = uniqueRows.filter(item => {
       const nombre = item.nombreApellido ?? '';
       const cedula = String(item.cedula ?? '');
       const telefono = String(item.telefono ?? '');
@@ -221,7 +220,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
     }
 
     return result;
-  }, [consolidatedRows, searchTerm, selectedBanco, selectedStatus, selectedMonth, sortOrder]);
+  }, [uniqueRows, searchTerm, selectedBanco, selectedStatus, selectedMonth, sortOrder]);
 
   const toggleSortOrder = () => {
     if (sortOrder === 'asc') setSortOrder('desc');
@@ -258,13 +257,13 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {[
-            { key: 'TODOS', label: 'TODOS', count: consolidatedRows.length },
-            { key: 'JULIO', label: 'JULIO', count: consolidatedRows.filter(i => i.mesInicial === 'JULIO').length },
-            { key: 'AGOSTO', label: 'AGOSTO', count: consolidatedRows.filter(i => i.mesInicial === 'AGOSTO').length },
-            { key: 'SEPTIEMBRE', label: 'SEPTIEMBRE', count: consolidatedRows.filter(i => i.mesInicial === 'SEPTIEMBRE').length },
-            { key: 'OCTUBRE', label: 'OCTUBRE', count: consolidatedRows.filter(i => i.mesInicial === 'OCTUBRE').length },
-            { key: 'NOVIEMBRE', label: 'NOVIEMBRE', count: consolidatedRows.filter(i => i.mesInicial === 'NOVIEMBRE').length },
-            { key: 'DICIEMBRE', label: 'DICIEMBRE', count: consolidatedRows.filter(i => i.mesInicial === 'DICIEMBRE').length },
+            { key: 'TODOS', label: 'TODOS', count: uniqueRows.length },
+            { key: 'JULIO', label: 'JULIO', count: uniqueRows.filter(i => i.mesInicial === 'JULIO').length },
+            { key: 'AGOSTO', label: 'AGOSTO', count: uniqueRows.filter(i => i.mesInicial === 'AGOSTO').length },
+            { key: 'SEPTIEMBRE', label: 'SEPTIEMBRE', count: uniqueRows.filter(i => i.mesInicial === 'SEPTIEMBRE').length },
+            { key: 'OCTUBRE', label: 'OCTUBRE', count: uniqueRows.filter(i => i.mesInicial === 'OCTUBRE').length },
+            { key: 'NOVIEMBRE', label: 'NOVIEMBRE', count: uniqueRows.filter(i => i.mesInicial === 'NOVIEMBRE').length },
+            { key: 'DICIEMBRE', label: 'DICIEMBRE', count: uniqueRows.filter(i => i.mesInicial === 'DICIEMBRE').length },
           ].map(tab => (
             <button
               key={tab.key}
