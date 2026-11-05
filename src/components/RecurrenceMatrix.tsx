@@ -56,7 +56,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
           ...item,
           jul: 0, ago: 0, sep: 0, oct: 0, nov: 0, dic: 0,
           mesInicial: 'OCTUBRE',
-          ultimaFecha: item.fechaPago || ''
+          fechaPago: item.fechaPago || '-'
         });
       }
 
@@ -82,7 +82,9 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         }
       }
 
-      if (item.fechaPago) entry.ultimaFecha = item.fechaPago;
+      if (item.fechaPago && item.fechaPago !== '-') {
+        entry.fechaPago = item.fechaPago;
+      }
       if (item.banco) entry.banco = item.banco;
       if (item.uds) entry.uds = item.uds;
     });
@@ -141,9 +143,9 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
   }, [consolidatedAsegurados, searchTerm, selectedBanco, selectedStatus, selectedMonth]);
 
   const exportToExcel = () => {
-    const headers = ['Fecha Ult. Pago', 'Nombre y Apellido', 'Cedula', 'Telefono', 'Cuota ($)', 'Banco', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic', 'Estatus'];
+    const headers = ['Fecha Inicial / Pago', 'Nombre y Apellido', 'Cedula', 'Telefono', 'Cuota ($)', 'Banco', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic', 'Estatus'];
     const rows = filteredAsegurados.map(i => [
-      i.fechaPago || '',
+      i.fechaPago || '-',
       `"${i.nombreApellido || ''}"`,
       i.cedula || '',
       i.telefono || '',
@@ -264,7 +266,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
           <thead>
             <tr style={{ backgroundColor: '#0f172a', color: '#ffffff', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.05em' }}>
-              <th style={{ padding: '0.6rem 0.8rem' }}>Fecha Últ. Pago</th>
+              <th style={{ padding: '0.6rem 0.8rem' }}>Fecha Inicial / Pago</th>
               <th style={{ padding: '0.6rem 0.8rem', width: '24%' }}>Nombre y Apellido</th>
               <th style={{ padding: '0.6rem 0.8rem' }}>Cédula</th>
               <th style={{ padding: '0.6rem 0.8rem' }}>Teléfono</th>
@@ -294,7 +296,9 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
 
                 return (
                   <tr key={item.id || index} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
-                    <td style={{ padding: '0.55rem 0.8rem', color: '#475569', whiteSpace: 'nowrap' }}>{item.fechaPago || '-'}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', color: item.fechaPago !== '-' ? '#0f172a' : '#94a3b8', fontWeight: item.fechaPago !== '-' ? 600 : 400, whiteSpace: 'nowrap' }}>
+                      {item.fechaPago || '-'}
+                    </td>
                     <td style={{ padding: '0.55rem 0.8rem', fontWeight: 600, color: '#0f172a' }}>{item.nombreApellido || '-'}</td>
                     <td style={{ padding: '0.55rem 0.8rem', color: '#334155', whiteSpace: 'nowrap' }}>{item.cedula || '-'}</td>
                     <td style={{ padding: '0.55rem 0.8rem', color: '#334155' }}>{item.telefono || '-'}</td>
