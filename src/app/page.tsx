@@ -41,7 +41,6 @@ export default function Home() {
     return () => unsubscribe();
   }, [isAuthenticated]);
 
-  // Consolidación global estricta agrupando por cédula para fusionar documentos de Firestore (ej: _AGOSTO, _JULIO)
   const asegurados = useMemo(() => {
     const map = new Map<string, any>();
     const mesesNombres = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
@@ -68,7 +67,6 @@ export default function Home() {
 
       const entry = map.get(cedulaKey)!;
 
-      // Marcar meses según las propiedades o el texto del mes
       if (Number(item.jul) > 0 || Number((item as any).cuotaJulio) > 0) entry.jul = 1;
       if (Number(item.ago) > 0 || Number((item as any).cuotaAgosto) > 0) entry.ago = 1;
       if (Number(item.sep) > 0 || Number((item as any).cuotaSeptiembre) > 0) entry.sep = 1;
@@ -168,9 +166,11 @@ export default function Home() {
         <div style={{ backgroundColor: '#ffffff', padding: '2.5rem 2rem', borderRadius: '1rem', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', width: '380px', textAlign: 'center', boxSizing: 'border-box', border: '1px solid #e2e8f0' }}>
           
           <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <div style={{ width: '54px', height: '54px', borderRadius: '12px', background: 'linear-gradient(135deg, #0f172a 0%, #0284c7 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(2, 132, 199, 0.3)' }}>
-              <span style={{ color: '#ffffff', fontWeight: 800, fontSize: '1.25rem', letterSpacing: '-0.05em' }}>SH</span>
-            </div>
+            <img 
+              src="/Biartet Logo circulo.png" 
+              alt="Biartet Logo" 
+              style={{ width: '70px', height: '70px', objectFit: 'contain', borderRadius: '50%' }} 
+            />
           </div>
 
           <h2 style={{ margin: '0 0 0.2rem', fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', lineHeight: '1.3' }}>
