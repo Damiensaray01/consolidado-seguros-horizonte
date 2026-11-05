@@ -46,13 +46,13 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
     if (onMonthFilterChange) onMonthFilterChange(month);
   };
 
-  // Agrupación estricta por Cédula dentro de la matriz para garantizar un solo renglón por cliente
-  const uniqueAsegurados = useMemo(() => {
+  // Consolidación final y absoluta por Cédula para garantizar una sola fila por persona en la UI
+  const consolidatedRows = useMemo(() => {
     const map = new Map<string, any>();
     const mesesNombres = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
     asegurados.forEach(item => {
-      const cedulaKey = String(item.cedula || item.nombreApellido || '').trim();
+      const cedulaKey = String(item.cedula || '').trim();
       if (!cedulaKey) return;
 
       if (!map.has(cedulaKey)) {
@@ -70,8 +70,8 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       }
 
       const entry = map.get(cedulaKey)!;
-      
-      // Acumular los meses si vienen fragmentados
+
+      // Fusionar marcas de meses si vienen de diferentes registros
       if (Number(item.jul) > 0) entry.jul = 1;
       if (Number(item.ago) > 0) entry.ago = 1;
       if (Number(item.sep) > 0) entry.sep = 1;
@@ -79,7 +79,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       if (Number(item.nov) > 0) entry.nov = 1;
       if (Number(item.dic) > 0) entry.dic = 1;
 
-      // Si el item individual tiene marcas en la matriz numérica tradicional
       const fecha = String(item.fechaPago || '');
       const itemAny = item as any;
       const mesTexto = String(item.mes || '').toUpperCase();
@@ -106,7 +105,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         }
       }
 
-      // Mantener la fecha de pago más antigua
+      // Guardar la fecha de pago más antigua como la fecha de emisión inicial
       const parseDate = (d: string) => {
         if (!d || d === '-') return 0;
         const p = d.split('/');
@@ -138,7 +137,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         }
       }
 
-      const currentIndex = 4; // Noviembre (índice 4)
+      const currentIndex = 4; // Noviembre
       let cuotasDebidas = 0;
 
       if (ultimoMesPagadoIndex !== -1 && ultimoMesPagadoIndex < currentIndex) {
@@ -166,7 +165,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
   }, [asegurados]);
 
   const filteredAsegurados = useMemo(() => {
-    let result = uniqueAsegurados.filter(item => {
+    let result = consolidatedRows.filter(item => {
       const nombre = item.nombreApellido ?? '';
       const cedula = String(item.cedula ?? '');
       const telefono = String(item.telefono ?? '');
@@ -222,7 +221,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
     }
 
     return result;
-  }, [uniqueAsegurados, searchTerm, selectedBanco, selectedStatus, selectedMonth, sortOrder]);
+  }, [consolidatedRows, searchTerm, selectedBanco, selectedStatus, selectedMonth, sortOrder]);
 
   const toggleSortOrder = () => {
     if (sortOrder === 'asc') setSortOrder('desc');
@@ -259,13 +258,13 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {[
-            { key: 'TODOS', label: 'TODOS', count: uniqueAsegurados.length },
-            { key: 'JULIO', label: 'JULIO', count: uniqueAsegurados.filter(i => i.mesInicial === 'JULIO').length },
-            { key: 'AGOSTO', label: 'AGOSTO', count: uniqueAsegurados.filter(i => i.mesInicial === 'AGOSTO').length },
-            { key: 'SEPTIEMBRE', label: 'SEPTIEMBRE', count: uniqueAsegurados.filter(i => i.mesInicial === 'SEPTIEMBRE').length },
-            { key: 'OCTUBRE', label: 'OCTUBRE', count: uniqueAsegurados.filter(i => i.mesInicial === 'OCTUBRE').length },
-            { key: 'NOVIEMBRE', label: 'NOVIEMBRE', count: uniqueAsegurados.filter(i => i.mesInicial === 'NOVIEMBRE').length },
-            { key: 'DICIEMBRE', label: 'DICIEMBRE', count: uniqueAsegurados.filter(i => i.mesInicial === 'DICIEMBRE').length },
+            { key: 'TODOS', label: 'TODOS', count: consolidatedRows.length },
+            { key: 'JULIO', label: 'JULIO', count: consolidatedRows.filter(i => i.mesInicial === 'JULIO').length },
+            { key: 'AGOSTO', label: 'AGOSTO', count: consolidatedRows.filter(i => i.mesInicial === 'AGOSTO').length },
+            { key: 'SEPTIEMBRE', label: 'SEPTIEMBRE', count: consolidatedRows.filter(i => i.mesInicial === 'SEPTIEMBRE').length },
+            { key: 'OCTUBRE', label: 'OCTUBRE', count: consolidatedRows.filter(i => i.mesInicial === 'OCTUBRE').length },
+            { key: 'NOVIEMBRE', label: 'NOVIEMBRE', count: consolidatedRows.filter(i => i.mesInicial === 'NOVIEMBRE').length },
+            { key: 'DICIEMBRE', label: 'DICIEMBRE', count: consolidatedRows.filter(i => i.mesInicial === 'DICIEMBRE').length },
           ].map(tab => (
             <button
               key={tab.key}
@@ -384,7 +383,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
                 </td>
               </tr>
             ) : (
-              filteredAsegurados.map((item, index) => {
+              filteredAsegurados.map((item) => {
                 const rawUds = Number(item.uds) || 599;
                 const formattedUds = (rawUds > 50 ? rawUds / 100 : rawUds).toFixed(2).replace('.', ',');
 
@@ -392,7 +391,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
                 const isDebeUna = item.estatusCalculado === 'Debe 1 Cuota';
 
                 return (
-                  <tr key={item.cedula || index} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
+                  <tr key={item.cedula} style={{ borderBottom: '1px solid #e2e8f0' }}>
                     <td style={{ padding: '0.55rem 0.8rem', color: item.fechaPago !== '-' ? '#0f172a' : '#dc2626', fontWeight: item.fechaPago !== '-' ? 600 : 700, whiteSpace: 'nowrap' }}>
                       {item.fechaPago || 'S/F'}
                     </td>
