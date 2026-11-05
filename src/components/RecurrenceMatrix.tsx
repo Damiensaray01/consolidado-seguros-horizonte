@@ -68,16 +68,19 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       const fecha = String(item.fechaPago || '');
       const cuotasPagadas = Number(itemAny.cuotasPagadas || 1);
 
-      let startIndex = mesesNombres.findIndex(m => mesTexto.includes(m));
-      if (startIndex === -1) {
-        if (fecha.includes('/7/')) startIndex = 6;
-        else if (fecha.includes('/8/')) startIndex = 7;
-        else if (fecha.includes('/9/')) startIndex = 8;
-        else if (fecha.includes('/10/')) startIndex = 9;
-        else if (fecha.includes('/11/')) startIndex = 10;
-        else if (fecha.includes('/12/')) startIndex = 11;
-        else startIndex = 9;
+      // Priorizar la fecha de pago o el texto del mes para el índice inicial
+      let startIndex = -1;
+      if (fecha.includes('/7/')) startIndex = 6;
+      else if (fecha.includes('/8/')) startIndex = 7;
+      else if (fecha.includes('/9/')) startIndex = 8;
+      else if (fecha.includes('/10/')) startIndex = 9;
+      else if (fecha.includes('/11/')) startIndex = 10;
+      else if (fecha.includes('/12/')) startIndex = 11;
+      else {
+        startIndex = mesesNombres.findIndex(m => mesTexto.includes(m));
       }
+
+      if (startIndex === -1) startIndex = 9; // Octubre por defecto
 
       const matrixKeys = ['jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
@@ -98,11 +101,11 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
 
     return Array.from(map.values()).map(client => {
       const mesesColsList = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-      const valArr = [client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
       
-      // Determinar con precisión el mes de inicio real basado en la fecha de pago o primera celda activa
-      let mesInicialIndex = -1;
+      // Asignar el mes inicial basándose estrictamente en la fecha de pago (ej: 1/10/2026 -> Octubre)
+      let mesInicialIndex = 3; // Octubre por defecto
       const fechaStr = String(client.fechaPago || '');
+      
       if (fechaStr.includes('/7/')) mesInicialIndex = 0;
       else if (fechaStr.includes('/8/')) mesInicialIndex = 1;
       else if (fechaStr.includes('/9/')) mesInicialIndex = 2;
@@ -110,11 +113,13 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       else if (fechaStr.includes('/11/')) mesInicialIndex = 4;
       else if (fechaStr.includes('/12/')) mesInicialIndex = 5;
       else {
-        mesInicialIndex = valArr.findIndex(v => v === 1);
-        if (mesInicialIndex === -1) mesInicialIndex = 3;
+        const valArr = [client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
+        const firstActive = valArr.findIndex(v => v === 1);
+        if (firstActive !== -1) mesInicialIndex = firstActive;
       }
 
       let mesInicial = mesesColsList[mesInicialIndex];
+      const valArr = [client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
 
       let ultimoMesPagadoIndex = -1;
       for (let i = valArr.length - 1; i >= 0; i--) {
@@ -128,8 +133,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       let cuotasDebidas = 0;
 
       if (ultimoMesPagadoIndex !== -1 && ultimoMesPagadoIndex < currentIndex) {
-        const ultimaFechaStr = String(client.fechaPago || '');
-        if (ultimaFechaStr.startsWith('30/') || ultimaFechaStr.startsWith('31/')) {
+        if (fechaStr.startsWith('30/') || fechaStr.startsWith('31/')) {
           cuotasDebidas = Math.max(0, currentIndex - (ultimoMesPagadoIndex + 1));
         } else {
           cuotasDebidas = currentIndex - ultimoMesPagadoIndex;
