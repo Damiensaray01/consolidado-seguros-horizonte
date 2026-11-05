@@ -50,7 +50,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
     const map = new Map<string, any>();
     const mesesNombres = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
-    // Agrupar todos los registros por Cédula para consolidar su historial completo de pagos en una sola fila
+    // Consolidar TODOS los registros de una misma Cédula en un único renglón unificado
     asegurados.forEach(item => {
       const key = String(item.cedula || item.nombreApellido || Math.random()).trim();
       
@@ -65,33 +65,45 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
 
       const entry = map.get(key)!;
       const fecha = String(item.fechaPago || '');
+      const itemAny = item as any;
+      const mesTexto = String(item.mes || '').toUpperCase();
+      const cuotasPagadas = Number(itemAny.cuotasPagadas || 1);
 
-      // Identificar el mes del pago de este registro específico
-      let pagoIndex = -1;
-      if (fecha.includes('/7/')) pagoIndex = 6;
-      else if (fecha.includes('/8/')) pagoIndex = 7;
-      else if (fecha.includes('/9/')) pagoIndex = 8;
-      else if (fecha.includes('/10/')) pagoIndex = 9;
-      else if (fecha.includes('/11/')) pagoIndex = 10;
-      else if (fecha.includes('/12/')) pagoIndex = 11;
-
-      const matrixKeys = ['jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-      if (pagoIndex >= 6 && pagoIndex < 12) {
-        entry[matrixKeys[pagoIndex - 6]] = 1;
+      let startIndex = -1;
+      if (fecha.includes('/7/')) startIndex = 6;
+      else if (fecha.includes('/8/')) startIndex = 7;
+      else if (fecha.includes('/9/')) startIndex = 8;
+      else if (fecha.includes('/10/')) startIndex = 9;
+      else if (fecha.includes('/11/')) startIndex = 10;
+      else if (fecha.includes('/12/')) startIndex = 11;
+      else {
+        startIndex = mesesNombres.findIndex(m => mesTexto.includes(m));
       }
 
-      // Guardar la fecha más antigua como fecha inicial de registro y la más reciente como última fecha
+      if (startIndex === -1) startIndex = 9; // Octubre por defecto
+
+      const matrixKeys = ['jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+      for (let i = 0; i < cuotasPagadas; i++) {
+        const targetIndex = startIndex + i;
+        if (targetIndex >= 6 && targetIndex < 12) {
+          const matrixKey = matrixKeys[targetIndex - 6];
+          entry[matrixKey] = 1; // Marcar como pagado ese mes
+        }
+      }
+
+      // Guardar la fecha de pago más antigua como la fecha inicial de emisión
       const parseDate = (d: string) => {
         if (!d || d === '-') return 0;
         const p = d.split('/');
         return p.length === 3 ? new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0])).getTime() : 0;
       };
 
-      const currentFechaPagoTime = parseDate(entry.fechaPago);
+      const currentFechaTime = parseDate(entry.fechaPago);
       const itemFechaTime = parseDate(item.fechaPago);
 
-      if (itemFechaTime > 0 && (currentFechaPagoTime === 0 || itemFechaTime < currentFechaPagoTime)) {
-        entry.fechaPago = item.fechaPago; // Mantener la fecha inicial del primer pago
+      if (itemFechaTime > 0 && (currentFechaTime === 0 || itemFechaTime < currentFechaTime)) {
+        entry.fechaPago = item.fechaPago;
       }
 
       if (item.banco) entry.banco = item.banco;
@@ -102,13 +114,13 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       const mesesColsList = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
       const valArr = [client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
       
-      // Determinar el mes inicial real (primer mes con pago registrado)
+      // Mes inicial real (primer mes donde tenga un 1)
       let mesInicialIndex = valArr.findIndex(v => v === 1);
-      if (mesInicialIndex === -1) mesInicialIndex = 3; // Octubre por defecto
+      if (mesInicialIndex === -1) mesInicialIndex = 3;
 
       let mesInicial = mesesColsList[mesInicialIndex];
 
-      // Determinar el último mes pagado
+      // Último mes pagado
       let ultimoMesPagadoIndex = -1;
       for (let i = valArr.length - 1; i >= 0; i--) {
         if (valArr[i] === 1) {
@@ -117,7 +129,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         }
       }
 
-      // Mes actual de gestión operativa (Noviembre = índice 4)
+      // Mes actual de gestión (Noviembre = índice 4)
       const currentIndex = 4; 
       let cuotasDebidas = 0;
 
