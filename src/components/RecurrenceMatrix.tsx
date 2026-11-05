@@ -26,8 +26,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
   const [selectedMonth, setSelectedMonth] = useState<string>(externalMonthFilter);
   const [selectedStatus, setSelectedStatus] = useState<string>(externalStatusFilter);
   const [selectedBanco, setSelectedBanco] = useState<string>('TODOS');
-  
-  // Estado para controlar el ordenamiento por fecha ('asc' | 'desc' | null)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>('asc');
 
   useEffect(() => {
@@ -102,8 +100,19 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       const mesesColsList = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
       const valArr = [client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
       
-      let mesInicialIndex = valArr.findIndex(v => v === 1);
-      if (mesInicialIndex === -1) mesInicialIndex = 3;
+      // Determinar con precisión el mes de inicio real basado en la fecha de pago o primera celda activa
+      let mesInicialIndex = -1;
+      const fechaStr = String(client.fechaPago || '');
+      if (fechaStr.includes('/7/')) mesInicialIndex = 0;
+      else if (fechaStr.includes('/8/')) mesInicialIndex = 1;
+      else if (fechaStr.includes('/9/')) mesInicialIndex = 2;
+      else if (fechaStr.includes('/10/')) mesInicialIndex = 3;
+      else if (fechaStr.includes('/11/')) mesInicialIndex = 4;
+      else if (fechaStr.includes('/12/')) mesInicialIndex = 5;
+      else {
+        mesInicialIndex = valArr.findIndex(v => v === 1);
+        if (mesInicialIndex === -1) mesInicialIndex = 3;
+      }
 
       let mesInicial = mesesColsList[mesInicialIndex];
 
@@ -176,14 +185,12 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       return matchSearch && matchBanco && matchStatus && matchMonth;
     });
 
-    // Lógica de ordenamiento por fecha
     if (sortOrder) {
       result.sort((a, b) => {
         const parseDate = (dateStr: string) => {
           if (!dateStr || dateStr === '-') return 0;
           const parts = dateStr.split('/');
           if (parts.length === 3) {
-            // Formato DD/MM/YYYY a timestamp para ordenar correctamente
             return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
           }
           return 0;
