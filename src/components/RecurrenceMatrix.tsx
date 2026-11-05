@@ -46,125 +46,8 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
     if (onMonthFilterChange) onMonthFilterChange(month);
   };
 
-  // Consolidación estricta y blindada por Cédula para la vista tabular
-  const uniqueRows = useMemo(() => {
-    const map = new Map<string, any>();
-    const mesesNombres = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-
-    asegurados.forEach(item => {
-      let cedulaKey = String(item.cedula || '').trim();
-      const idPart = String(item.id || '');
-      
-      if (!cedulaKey && idPart.includes('_')) {
-        cedulaKey = idPart.split('_')[0].trim();
-      }
-      if (!cedulaKey) cedulaKey = String(item.nombreApellido || 'N/D').trim();
-      if (!cedulaKey) return;
-
-      if (!map.has(cedulaKey)) {
-        map.set(cedulaKey, {
-          ...item,
-          cedula: cedulaKey,
-          jul: 0, ago: 0, sep: 0, oct: 0, nov: 0, dic: 0,
-          mesInicial: 'JULIO',
-          fechaPago: item.fechaPago || '-'
-        });
-      }
-
-      const entry = map.get(cedulaKey)!;
-
-      // Fusionar los meses pagados
-      if (Number(item.jul) > 0 || Number((item as any).cuotaJulio) > 0) entry.jul = 1;
-      if (Number(item.ago) > 0 || Number((item as any).cuotaAgosto) > 0) entry.ago = 1;
-      if (Number(item.sep) > 0 || Number((item as any).cuotaSeptiembre) > 0) entry.sep = 1;
-      if (Number(item.oct) > 0 || Number((item as any).cuotaOctubre) > 0) entry.oct = 1;
-      if (Number(item.nov) > 0 || Number((item as any).cuotaNoviembre) > 0) entry.nov = 1;
-      if (Number(item.dic) > 0 || Number((item as any).cuotaDiciembre) > 0) entry.dic = 1;
-
-      const fecha = String(item.fechaPago || '');
-      const mesTexto = String(item.mes || '').toUpperCase();
-      let startIndex = -1;
-
-      if (fecha.includes('/7/')) startIndex = 6;
-      else if (fecha.includes('/8/')) startIndex = 7;
-      else if (fecha.includes('/9/')) startIndex = 8;
-      else if (fecha.includes('/10/')) startIndex = 9;
-      else if (fecha.includes('/11/')) startIndex = 10;
-      else if (fecha.includes('/12/')) startIndex = 11;
-      else {
-        startIndex = mesesNombres.findIndex(m => mesTexto.includes(m));
-      }
-
-      if (startIndex >= 6 && startIndex < 12) {
-        const matrixKeys = ['jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-        entry[matrixKeys[startIndex - 6]] = 1;
-      }
-
-      const parseDate = (d: string) => {
-        if (!d || d === '-') return 0;
-        const p = d.split('/');
-        return p.length === 3 ? new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0])).getTime() : 0;
-      };
-
-      const currentFechaTime = parseDate(entry.fechaPago);
-      const itemFechaTime = parseDate(item.fechaPago);
-
-      if (itemFechaTime > 0 && (currentFechaTime === 0 || itemFechaTime < currentFechaTime)) {
-        entry.fechaPago = item.fechaPago;
-      }
-
-      if (item.banco) entry.banco = item.banco;
-      if (item.uds) entry.uds = item.uds;
-      if (item.nombreApellido) entry.nombreApellido = item.nombreApellido;
-      if (item.telefono) entry.telefono = item.telefono;
-    });
-
-    return Array.from(map.values()).map(client => {
-      const mesesColsList = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-      const valArr = [client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
-      
-      let mesInicialIndex = valArr.findIndex(v => v === 1);
-      if (mesInicialIndex === -1) mesInicialIndex = 3;
-
-      let mesInicial = mesesColsList[mesInicialIndex];
-
-      let ultimoMesPagadoIndex = -1;
-      for (let i = valArr.length - 1; i >= 0; i--) {
-        if (valArr[i] === 1) {
-          ultimoMesPagadoIndex = i;
-          break;
-        }
-      }
-
-      const currentIndex = 4; // Noviembre
-      let cuotasDebidas = 0;
-
-      if (ultimoMesPagadoIndex !== -1 && ultimoMesPagadoIndex < currentIndex) {
-        const fechaStr = String(client.fechaPago || '');
-        if (fechaStr.startsWith('30/') || fechaStr.startsWith('31/')) {
-          cuotasDebidas = Math.max(0, currentIndex - (ultimoMesPagadoIndex + 1));
-        } else {
-          cuotasDebidas = currentIndex - ultimoMesPagadoIndex;
-        }
-      } else if (ultimoMesPagadoIndex === -1) {
-        cuotasDebidas = 1;
-      }
-
-      let estatusCalculado = 'Solvente';
-      if (cuotasDebidas === 1) estatusCalculado = 'Debe 1 Cuota';
-      else if (cuotasDebidas > 1) estatusCalculado = `Debe ${cuotasDebidas} Cuotas`;
-
-      return {
-        ...client,
-        mesInicial,
-        estatusCalculado,
-        cuotasDebidas
-      };
-    });
-  }, [asegurados]);
-
   const filteredAsegurados = useMemo(() => {
-    let result = uniqueRows.filter(item => {
+    let result = asegurados.filter(item => {
       const nombre = item.nombreApellido ?? '';
       const cedula = String(item.cedula ?? '');
       const telefono = String(item.telefono ?? '');
@@ -186,7 +69,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       } else if (selectedStatus === 'Debe 1 Cuota') {
         matchStatus = item.estatusCalculado === 'Debe 1 Cuota';
       } else if (selectedStatus.includes('Debe')) {
-        matchStatus = item.cuotasDebidas >= 1;
+        matchStatus = (item.cuotasDebidas ?? 0) >= 1;
       }
 
       let matchMonth = true;
@@ -220,7 +103,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
     }
 
     return result;
-  }, [uniqueRows, searchTerm, selectedBanco, selectedStatus, selectedMonth, sortOrder]);
+  }, [asegurados, searchTerm, selectedBanco, selectedStatus, selectedMonth, sortOrder]);
 
   const toggleSortOrder = () => {
     if (sortOrder === 'asc') setSortOrder('desc');
@@ -257,13 +140,13 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {[
-            { key: 'TODOS', label: 'TODOS', count: uniqueRows.length },
-            { key: 'JULIO', label: 'JULIO', count: uniqueRows.filter(i => i.mesInicial === 'JULIO').length },
-            { key: 'AGOSTO', label: 'AGOSTO', count: uniqueRows.filter(i => i.mesInicial === 'AGOSTO').length },
-            { key: 'SEPTIEMBRE', label: 'SEPTIEMBRE', count: uniqueRows.filter(i => i.mesInicial === 'SEPTIEMBRE').length },
-            { key: 'OCTUBRE', label: 'OCTUBRE', count: uniqueRows.filter(i => i.mesInicial === 'OCTUBRE').length },
-            { key: 'NOVIEMBRE', label: 'NOVIEMBRE', count: uniqueRows.filter(i => i.mesInicial === 'NOVIEMBRE').length },
-            { key: 'DICIEMBRE', label: 'DICIEMBRE', count: uniqueRows.filter(i => i.mesInicial === 'DICIEMBRE').length },
+            { key: 'TODOS', label: 'TODOS', count: asegurados.length },
+            { key: 'JULIO', label: 'JULIO', count: asegurados.filter(i => i.mesInicial === 'JULIO').length },
+            { key: 'AGOSTO', label: 'AGOSTO', count: asegurados.filter(i => i.mesInicial === 'AGOSTO').length },
+            { key: 'SEPTIEMBRE', label: 'SEPTIEMBRE', count: asegurados.filter(i => i.mesInicial === 'SEPTIEMBRE').length },
+            { key: 'OCTUBRE', label: 'OCTUBRE', count: asegurados.filter(i => i.mesInicial === 'OCTUBRE').length },
+            { key: 'NOVIEMBRE', label: 'NOVIEMBRE', count: asegurados.filter(i => i.mesInicial === 'NOVIEMBRE').length },
+            { key: 'DICIEMBRE', label: 'DICIEMBRE', count: asegurados.filter(i => i.mesInicial === 'DICIEMBRE').length },
           ].map(tab => (
             <button
               key={tab.key}

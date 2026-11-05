@@ -41,26 +41,25 @@ export default function Home() {
     return () => unsubscribe();
   }, [isAuthenticated]);
 
-  // Fusión estricta en el nivel principal por Cédula para consolidar documentos separados de Firestore
+  // Consolidación global estricta agrupando por cédula para fusionar documentos de Firestore (ej: _AGOSTO, _JULIO)
   const asegurados = useMemo(() => {
     const map = new Map<string, any>();
     const mesesNombres = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
     rawAsegurados.forEach(item => {
-      // Extraer la cédula limpia (si el ID es '10111544_AGOSTO', extraemos '10111544' o usamos el campo cedula)
-      const rawCedula = String(item.cedula || '');
+      let cedulaKey = String(item.cedula || '').trim();
       const idPart = String(item.id || '');
-      let cedulaKey = rawCedula.trim();
       
       if (!cedulaKey && idPart.includes('_')) {
         cedulaKey = idPart.split('_')[0].trim();
       }
       if (!cedulaKey) cedulaKey = String(item.nombreApellido || 'N/D').trim();
+      if (!cedulaKey) return;
 
       if (!map.has(cedulaKey)) {
         map.set(cedulaKey, {
           ...item,
-          cedula: cedulaKey || item.cedula,
+          cedula: cedulaKey,
           jul: 0, ago: 0, sep: 0, oct: 0, nov: 0, dic: 0,
           mesInicial: 'JULIO',
           fechaPago: item.fechaPago || '-'
@@ -68,8 +67,8 @@ export default function Home() {
       }
 
       const entry = map.get(cedulaKey)!;
-      
-      // Capturar marcas directas si vienen en el documento de Firestore
+
+      // Marcar meses según las propiedades o el texto del mes
       if (Number(item.jul) > 0 || Number((item as any).cuotaJulio) > 0) entry.jul = 1;
       if (Number(item.ago) > 0 || Number((item as any).cuotaAgosto) > 0) entry.ago = 1;
       if (Number(item.sep) > 0 || Number((item as any).cuotaSeptiembre) > 0) entry.sep = 1;
@@ -77,7 +76,6 @@ export default function Home() {
       if (Number(item.nov) > 0 || Number((item as any).cuotaNoviembre) > 0) entry.nov = 1;
       if (Number(item.dic) > 0 || Number((item as any).cuotaDiciembre) > 0) entry.dic = 1;
 
-      // Evaluar por fecha de pago o mes del documento
       const fecha = String(item.fechaPago || '');
       const mesTexto = String(item.mes || '').toUpperCase();
       let startIndex = -1;
@@ -97,7 +95,6 @@ export default function Home() {
         entry[matrixKeys[startIndex - 6]] = 1;
       }
 
-      // Conservar la fecha más antigua como fecha inicial
       const parseDate = (d: string) => {
         if (!d || d === '-') return 0;
         const p = d.split('/');
@@ -134,7 +131,7 @@ export default function Home() {
         }
       }
 
-      const currentIndex = 4; // Noviembre (índice 4)
+      const currentIndex = 4; // Noviembre
       let cuotasDebidas = 0;
 
       if (ultimoMesPagadoIndex !== -1 && ultimoMesPagadoIndex < currentIndex) {
