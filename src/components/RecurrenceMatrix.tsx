@@ -296,8 +296,8 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
 
                 return (
                   <tr key={item.id || index} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
-                    <td style={{ padding: '0.55rem 0.8rem', color: item.fechaPago !== '-' ? '#0f172a' : '#94a3b8', fontWeight: item.fechaPago !== '-' ? 600 : 400, whiteSpace: 'nowrap' }}>
-                      {item.fechaPago || '-'}
+                    <td style={{ padding: '0.55rem 0.8rem', color: item.fechaPago !== '-' ? '#0f172a' : '#dc2626', fontWeight: item.fechaPago !== '-' ? 600 : 700, whiteSpace: 'nowrap' }}>
+                      {item.fechaPago || 'S/F'}
                     </td>
                     <td style={{ padding: '0.55rem 0.8rem', fontWeight: 600, color: '#0f172a' }}>{item.nombreApellido || '-'}</td>
                     <td style={{ padding: '0.55rem 0.8rem', color: '#334155', whiteSpace: 'nowrap' }}>{item.cedula || '-'}</td>
