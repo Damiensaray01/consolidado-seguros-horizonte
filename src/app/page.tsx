@@ -311,3 +311,4 @@ export default function Home() {
     </main>
   );
 }
+// Actualización de logo y matriz unificada 2026
