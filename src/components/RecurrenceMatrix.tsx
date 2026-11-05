@@ -48,23 +48,21 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
 
   const consolidatedAsegurados = useMemo(() => {
     const map = new Map<string, any>();
+    const mesesNombres = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
-    // Ordenar los asegurados por fecha de pago ascendente para procesar primero los registros más antiguos
-    const sortedAsegurados = [...asegurados].sort((a, b) => {
-      const parseDate = (d: string) => {
-        if (!d || d === '-') return 0;
-        const p = d.split('/');
-        return p.length === 3 ? new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0])).getTime() : 0;
-      };
-      return parseDate(a.fechaPago) - parseDate(b.fechaPago);
-    });
-
-    sortedAsegurados.forEach(item => {
-      const key = String(item.cedula || item.nombreApellido || Math.random()).trim();
+    // Procesar cada registro individualmente para respetar los pagos mensuales independientes
+    asegurados.forEach((item, index) => {
+      const cedulaBase = String(item.cedula || '').trim();
+      const fecha = String(item.fechaPago || '');
       
+      // Si hay multiples pagos de la misma cedula, creamos una clave única por registro o agrupamos inteligentemente
+      // Para seguimiento mensual por pagos independientes, usamos el ID del documento o cedula + fecha
+      const key = `${cedulaBase}_${fecha || index}`;
+
       if (!map.has(key)) {
         map.set(key, {
           ...item,
+          id: item.id || index,
           jul: 0, ago: 0, sep: 0, oct: 0, nov: 0, dic: 0,
           mesInicial: 'OCTUBRE',
           fechaPago: item.fechaPago || '-'
@@ -72,23 +70,33 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       }
 
       const entry = map.get(key)!;
-      const fecha = String(item.fechaPago || '');
+      const itemAny = item as any;
+      const mesTexto = String(item.mes || '').toUpperCase();
+      const cuotasPagadas = Number(itemAny.cuotasPagadas || 1);
 
-      // Identificar el mes exacto del pago de este registro
-      let pagoIndex = -1;
-      if (fecha.includes('/7/')) pagoIndex = 6;
-      else if (fecha.includes('/8/')) pagoIndex = 7;
-      else if (fecha.includes('/9/')) pagoIndex = 8;
-      else if (fecha.includes('/10/')) pagoIndex = 9;
-      else if (fecha.includes('/11/')) pagoIndex = 10;
-      else if (fecha.includes('/12/')) pagoIndex = 11;
-
-      const matrixKeys = ['jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-      if (pagoIndex >= 6 && pagoIndex < 12) {
-        entry[matrixKeys[pagoIndex - 6]] = 1;
+      let startIndex = -1;
+      if (fecha.includes('/7/')) startIndex = 6;
+      else if (fecha.includes('/8/')) startIndex = 7;
+      else if (fecha.includes('/9/')) startIndex = 8;
+      else if (fecha.includes('/10/')) startIndex = 9;
+      else if (fecha.includes('/11/')) startIndex = 10;
+      else if (fecha.includes('/12/')) startIndex = 11;
+      else {
+        startIndex = mesesNombres.findIndex(m => mesTexto.includes(m));
       }
 
-      // Guardar siempre la fecha de pago más reciente o mantener la inicial según convenga
+      if (startIndex === -1) startIndex = 9; // Octubre por defecto
+
+      const matrixKeys = ['jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+      for (let i = 0; i < cuotasPagadas; i++) {
+        const targetIndex = startIndex + i;
+        if (targetIndex >= 6 && targetIndex < 12) {
+          const matrixKey = matrixKeys[targetIndex - 6];
+          entry[matrixKey] = 1;
+        }
+      }
+
       if (item.fechaPago && item.fechaPago !== '-') {
         entry.fechaPago = item.fechaPago;
       }
@@ -98,13 +106,24 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
 
     return Array.from(map.values()).map(client => {
       const mesesColsList = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-      const valArr = [client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
       
-      // El mes inicial es el primer mes donde tenga un 1 registrado en la matriz
-      let mesInicialIndex = valArr.findIndex(v => v === 1);
-      if (mesInicialIndex === -1) mesInicialIndex = 3; // Octubre por defecto
+      let mesInicialIndex = 3; // Octubre por defecto
+      const fechaStr = String(client.fechaPago || '');
+      
+      if (fechaStr.includes('/7/')) mesInicialIndex = 0;
+      else if (fechaStr.includes('/8/')) mesInicialIndex = 1;
+      else if (fechaStr.includes('/9/')) mesInicialIndex = 2;
+      else if (fechaStr.includes('/10/')) mesInicialIndex = 3;
+      else if (fechaStr.includes('/11/')) mesInicialIndex = 4;
+      else if (fechaStr.includes('/12/')) mesInicialIndex = 5;
+      else {
+        const valArr = [client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
+        const firstActive = valArr.findIndex(v => v === 1);
+        if (firstActive !== -1) mesInicialIndex = firstActive;
+      }
 
       let mesInicial = mesesColsList[mesInicialIndex];
+      const valArr = [client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
 
       let ultimoMesPagadoIndex = -1;
       for (let i = valArr.length - 1; i >= 0; i--) {
@@ -118,7 +137,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       let cuotasDebidas = 0;
 
       if (ultimoMesPagadoIndex !== -1 && ultimoMesPagadoIndex < currentIndex) {
-        const fechaStr = String(client.fechaPago || '');
         if (fechaStr.startsWith('30/') || fechaStr.startsWith('31/')) {
           cuotasDebidas = Math.max(0, currentIndex - (ultimoMesPagadoIndex + 1));
         } else {
@@ -384,7 +402,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
                     <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: Number(item.jul) > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.jul}</td>
                     <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: Number(item.ago) > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.ago}</td>
                     <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: Number(item.sep) > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.sep}</td>
-                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: Number(item.oct) > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.oct}</td>
+                    <td style={{ padding: '0.55‍♂️ 0.8rem', textAlign: 'center', color: Number(item.oct) > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.oct}</td>
                     <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: Number(item.nov) > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.nov}</td>
                     <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: Number(item.dic) > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.dic}</td>
                     <td style={{ padding: '0.55rem 0.8rem', whiteSpace: 'nowrap' }}>
