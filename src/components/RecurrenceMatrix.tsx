@@ -78,10 +78,8 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         else startIndex = 9; // Octubre por defecto
       }
 
-      const keysMeses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
       const matrixKeys = ['jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
-      // Marcar cuotas (incluyendo pago único / múltiple desde el mes de inicio)
       for (let i = 0; i < cuotasPagadas; i++) {
         const targetIndex = startIndex + i;
         if (targetIndex >= 6 && targetIndex < 12) {
@@ -98,25 +96,34 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
     });
 
     return Array.from(map.values()).map(client => {
-      let mesInicialIndex = -1;
       const mesesColsList = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
       const valArr = [client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
       
-      const firstActive = valArr.findIndex(v => v === 1);
-      if (firstActive !== -1) {
-        mesInicialIndex = firstActive;
+      let mesInicialIndex = valArr.findIndex(v => v === 1);
+      if (mesInicialIndex === -1) mesInicialIndex = 3; // Octubre por defecto
+
+      let mesInicial = mesesColsList[mesInicialIndex];
+
+      // Cálculo dinámico de cuotas debidas hasta el mes actual (Noviembre = índice 4)
+      const currentIndex = 4; 
+      let cuotasDebidas = 0;
+      const limitIndex = Math.min(currentIndex, 5);
+
+      for (let i = mesInicialIndex; i <= limitIndex; i++) {
+        if (valArr[i] === 0) {
+          cuotasDebidas++;
+        }
       }
 
-      let mesInicial = 'OCTUBRE';
-      if (mesInicialIndex !== -1) {
-        mesInicial = mesesColsList[mesInicialIndex];
-      }
+      let estatusCalculado = 'Solvente';
+      if (cuotasDebidas === 1) estatusCalculado = 'Debe 1 Cuota';
+      else if (cuotasDebidas > 1) estatusCalculado = `Debe ${cuotasDebidas} Cuotas`;
 
       return {
         ...client,
         mesInicial,
-        estatusCalculado: 'Solvente',
-        cuotasDebidas: 0
+        estatusCalculado,
+        cuotasDebidas
       };
     });
   }, [asegurados]);
@@ -308,6 +315,9 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
                 const rawUds = Number(item.uds) || 599;
                 const formattedUds = (rawUds > 50 ? rawUds / 100 : rawUds).toFixed(2).replace('.', ',');
 
+                const isSolvente = item.estatusCalculado === 'Solvente';
+                const isDebeUna = item.estatusCalculado === 'Debe 1 Cuota';
+
                 return (
                   <tr key={item.id || index} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
                     <td style={{ padding: '0.55rem 0.8rem', color: item.fechaPago !== '-' ? '#0f172a' : '#dc2626', fontWeight: item.fechaPago !== '-' ? 600 : 700, whiteSpace: 'nowrap' }}>
@@ -331,12 +341,28 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
                     <td style={{ padding: '0.55rem 0.8rem', whiteSpace: 'nowrap' }}>
                       <span style={{
                         fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: '1rem', fontWeight: 600,
-                        backgroundColor: '#dcfce7', color: '#166534', display: 'inline-block'
+                        backgroundColor: isSolvente ? '#dcfce7' : isDebeUna ? '#fef9c3' : '#fee2e2',
+                        color: isSolvente ? '#166534' : isDebeUna ? '#854d0e' : '#991b1b',
+                        display: 'inline-block'
                       }}>
-                        Solvente
+                        {item.estatusCalculado}
                       </span>
                     </td>
                     <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
                       <button
                         onClick={() => onSelectAsegurado(item)}
                         style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '0.25rem 0.5rem', borderRadius: '0.3rem', fontSize: '0.7rem', fontWeight: 600, color: '#334155', cursor: 'pointer' }}
+                      >
+                        ✏️ Editar
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
