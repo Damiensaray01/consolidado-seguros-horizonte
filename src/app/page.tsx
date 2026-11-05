@@ -8,8 +8,8 @@ import { Header } from '@/components/Header';
 import { KpiCards } from '@/components/KpiCards';
 import { RecurrenceMatrix } from '@/components/RecurrenceMatrix';
 import { SeguimientoCobranzas } from '@/components/SeguimientoCobranzas';
-import { ReceiptModal } from '@/components/ReceiptModal';
 import { NewPaymentModal } from '@/components/NewPaymentModal';
+import { EditPaymentModal } from '@/components/EditPaymentModal';
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -43,54 +43,66 @@ export default function Home() {
 
   const consolidatedAsegurados = useMemo(() => {
     const map = new Map<string, any>();
+    const mesesNombres = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+
     asegurados.forEach(item => {
       const key = String(item.cedula || item.nombreApellido || Math.random()).trim();
       if (!map.has(key)) {
-        map.set(key, { ...item, jul: 0, ago: 0, sep: 0, oct: 0, nov: 0, dic: 0 });
+        map.set(key, { 
+          ...item, 
+          ene: 0, feb: 0, mar: 0, abr: 0, may: 0, jun: 0, 
+          jul: 0, ago: 0, sep: 0, oct: 0, nov: 0, dic: 0 
+        });
       }
       const entry = map.get(key)!;
       const itemAny = item as any;
-
-      const julVal = Number(itemAny.cuotaJulio || (item.mes?.toUpperCase().includes('JULIO') ? 1 : 0) || (item.jul || 0));
-      const agoVal = Number(itemAny.cuotaAgosto || (item.mes?.toUpperCase().includes('AGOSTO') ? 1 : 0) || (item.ago || 0));
-      const sepVal = Number(itemAny.cuotaSeptiembre || (item.mes?.toUpperCase().includes('SEPTIEMBRE') ? 1 : 0) || (item.sep || 0));
-      const octVal = Number(itemAny.cuotaOctubre || (item.mes?.toUpperCase().includes('OCTUBRE') ? 1 : 0) || (item.oct || 0));
-
-      if (julVal > 0) entry.jul = 1;
-      if (agoVal > 0) entry.ago = 1;
-      if (sepVal > 0) entry.sep = 1;
-      if (octVal > 0) entry.oct = 1;
-
+      const mesTexto = String(item.mes || '').toUpperCase();
       const fecha = String(item.fechaPago || '');
-      if (fecha.includes('/7/2026') || fecha.startsWith('7/')) entry.jul = 1;
-      if (fecha.includes('/8/2026') || fecha.startsWith('8/')) entry.ago = 1;
-      if (fecha.includes('/9/2026') || fecha.startsWith('9/')) entry.sep = 1;
-      if (fecha.includes('/10/2026') || fecha.startsWith('10/')) entry.oct = 1;
-    });
+      const cuotasPagadas = Number(itemAny.cuotasPagadas || 1);
 
-    return Array.from(map.values()).map(client => {
-      let mesInicial = 'JULIO';
-      if (client.jul === 1) mesInicial = 'JULIO';
-      else if (client.ago === 1) mesInicial = 'AGOSTO';
-      else if (client.sep === 1) mesInicial = 'SEPTIEMBRE';
-      else if (client.oct === 1) mesInicial = 'OCTUBRE';
+      let startIndex = mesesNombres.findIndex(m => mesTexto.includes(m));
+      if (startIndex === -1) {
+        if (fecha.includes('/1/')) startIndex = 0;
+        else if (fecha.includes('/2/')) startIndex = 1;
+        else if (fecha.includes('/3/')) startIndex = 2;
+        else if (fecha.includes('/4/')) startIndex = 3;
+        else if (fecha.includes('/5/')) startIndex = 4;
+        else if (fecha.includes('/6/')) startIndex = 5;
+        else if (fecha.includes('/7/')) startIndex = 6;
+        else if (fecha.includes('/8/')) startIndex = 7;
+        else if (fecha.includes('/9/')) startIndex = 8;
+        else if (fecha.includes('/10/')) startIndex = 9;
+        else if (fecha.includes('/11/')) startIndex = 10;
+        else if (fecha.includes('/12/')) startIndex = 11;
+        else startIndex = 9; // Por defecto Octubre si no especifica
+      }
 
-      const mesesEvaluar = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE'];
-      const startIndex = mesesEvaluar.indexOf(mesInicial);
-      let cuotasDebidas = 0;
-
-      if (startIndex !== -1) {
-        const valores = [client.jul, client.ago, client.sep, client.oct];
-        for (let i = startIndex; i < valores.length; i++) {
-          if (valores[i] === 0) cuotasDebidas++;
+      // Marcar los meses consecutivos según las cuotas pagadas (duplicidad de recurrencia)
+      const keysMeses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      for (let i = 0; i < cuotasPagadas; i++) {
+        const targetIndex = startIndex + i;
+        if (targetIndex < keysMeses.length) {
+          entry[keysMeses[targetIndex]] = 1;
         }
       }
 
-      let estatusCalculado = 'Solvente';
-      if (cuotasDebidas === 1) estatusCalculado = 'Debe 1 Cuota';
-      else if (cuotasDebidas > 1) estatusCalculado = `Debe ${cuotasDebidas} Cuotas`;
+      if (item.fechaPago) entry.ultimaFecha = item.fechaPago;
+    });
 
-      return { ...client, mesInicial, estatusCalculado, cuotasDebidas };
+    return Array.from(map.values()).map(client => {
+      const keysMeses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+      const valores = [client.ene, client.feb, client.mar, client.abr, client.may, client.jun, client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
+      
+      let mesInicialIndex = valores.findIndex(v => v === 1);
+      if (mesInicialIndex === -1) mesInicialIndex = 9; // Octubre por defecto
+      let mesInicial = keysMeses[mesInicialIndex];
+
+      return { 
+        ...client, 
+        mesInicial, 
+        estatusCalculado: 'Solvente', 
+        cuotasDebidas: 0 
+      };
     });
   }, [asegurados]);
 
@@ -103,18 +115,8 @@ export default function Home() {
       }}>
         <div style={{ backgroundColor: '#ffffff', padding: '2.5rem 2rem', borderRadius: '1rem', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', width: '380px', textAlign: 'center', boxSizing: 'border-box', border: '1px solid #e2e8f0' }}>
           
-          {/* Insignia / Isotipo Corporativo Profesional */}
           <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <div style={{ 
-              width: '54px', 
-              height: '54px', 
-              borderRadius: '12px', 
-              background: 'linear-gradient(135deg, #0f172a 0%, #0284c7 100%)', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              boxShadow: '0 4px 10px rgba(2, 132, 199, 0.3)'
-            }}>
+            <div style={{ width: '54px', height: '54px', borderRadius: '12px', background: 'linear-gradient(135deg, #0f172a 0%, #0284c7 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(2, 132, 199, 0.3)' }}>
               <span style={{ color: '#ffffff', fontWeight: 800, fontSize: '1.25rem', letterSpacing: '-0.05em' }}>SH</span>
             </div>
           </div>
@@ -174,7 +176,6 @@ export default function Home() {
             </button>
           </form>
 
-          {/* Business Intelligence dinámico con el año actual */}
           <div style={{ marginTop: '1.75rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.85rem', width: '100%' }}>
             <p style={{ margin: 0, fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
               Business Intelligence {currentYear}
@@ -192,7 +193,6 @@ export default function Home() {
       
       <div style={{ padding: '1.5rem', maxWidth: '1400px', margin: '0 auto' }}>
         
-        {/* Selector de Pestañas Superiores */}
         <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.75rem' }}>
           <button
             onClick={() => setActiveTab('consolidado')}
@@ -253,7 +253,7 @@ export default function Home() {
 
       </div>
 
-      <ReceiptModal asegurado={selectedAsegurado} onClose={() => setSelectedAsegurado(null)} />
+      <EditPaymentModal asegurado={selectedAsegurado} onClose={() => setSelectedAsegurado(null)} />
       <NewPaymentModal isOpen={isNewModalOpen} onClose={() => setIsNewModalOpen(false)} />
     </main>
   );
