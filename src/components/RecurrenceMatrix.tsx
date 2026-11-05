@@ -73,26 +73,23 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
 
       const entry = map.get(key)!;
       const itemAny = item as any;
-
-      const julVal = Number(itemAny.cuotaJulio || (item.mes?.toUpperCase().includes('JULIO') ? 1 : 0) || (item.jul || 0));
-      const agoVal = Number(itemAny.cuotaAgosto || (item.mes?.toUpperCase().includes('AGOSTO') ? 1 : 0) || (item.ago || 0));
-      const sepVal = Number(itemAny.cuotaSeptiembre || (item.mes?.toUpperCase().includes('SEPTIEMBRE') ? 1 : 0) || (item.sep || 0));
-      const octVal = Number(itemAny.cuotaOctubre || (item.mes?.toUpperCase().includes('OCTUBRE') ? 1 : 0) || (item.oct || 0));
-      const novVal = Number(itemAny.cuotaNoviembre || (item.mes?.toUpperCase().includes('NOVIEMBRE') ? 1 : 0) || (item.nov || 0));
-      const dicVal = Number(itemAny.cuotaDiciembre || (item.mes?.toUpperCase().includes('DICIEMBRE') ? 1 : 0) || (item.dic || 0));
-
-      if (julVal > 0) entry.jul = 1;
-      if (agoVal > 0) entry.ago = 1;
-      if (sepVal > 0) entry.sep = 1;
-      if (octVal > 0) entry.oct = 1;
-      if (novVal > 0) entry.nov = 1;
-      if (dicVal > 0) entry.dic = 1;
-
+      const mesTexto = String(item.mes || '').toUpperCase();
       const fecha = String(item.fechaPago || '');
-      if (fecha.includes('/7/2026') || fecha.startsWith('7/')) entry.jul = 1;
-      if (fecha.includes('/8/2026') || fecha.startsWith('8/')) entry.ago = 1;
-      if (fecha.includes('/9/2026') || fecha.startsWith('9/')) entry.sep = 1;
-      if (fecha.includes('/10/2026') || fecha.startsWith('10/')) entry.oct = 1;
+
+      // Detección precisa de meses por celda 'mes', campos específicos o formato de fecha DD/MM/YYYY
+      const esJulio = mesTexto.includes('JULIO') || Number(itemAny.cuotaJulio) > 0 || fecha.includes('/7/2026') || fecha.startsWith('7/') || fecha.includes('.7.');
+      const esAgosto = mesTexto.includes('AGOSTO') || Number(itemAny.cuotaAgosto) > 0 || fecha.includes('/8/2026') || fecha.startsWith('8/') || fecha.includes('.8.');
+      const esSeptiembre = mesTexto.includes('SEPTIEMBRE') || Number(itemAny.cuotaSeptiembre) > 0 || fecha.includes('/9/2026') || fecha.startsWith('9/') || fecha.includes('.9.');
+      const esOctubre = mesTexto.includes('OCTUBRE') || Number(itemAny.cuotaOctubre) > 0 || fecha.includes('/10/2026') || fecha.includes('/10/') || fecha.startsWith('10/') || fecha.includes('.10.');
+      const esNoviembre = mesTexto.includes('NOVIEMBRE') || Number(itemAny.cuotaNoviembre) > 0 || fecha.includes('/11/2026') || fecha.includes('/11/') || fecha.startsWith('11/');
+      const esDiciembre = mesTexto.includes('DICIEMBRE') || Number(itemAny.cuotaDiciembre) > 0 || fecha.includes('/12/2026') || fecha.includes('/12/') || fecha.startsWith('12/');
+
+      if (esJulio || Number(item.jul) > 0) entry.jul = 1;
+      if (esAgosto || Number(item.ago) > 0) entry.ago = 1;
+      if (esSeptiembre || Number(item.sep) > 0) entry.sep = 1;
+      if (esOctubre || Number(item.oct) > 0) entry.oct = 1;
+      if (esNoviembre || Number(item.nov) > 0) entry.nov = 1;
+      if (esDiciembre || Number(item.dic) > 0) entry.dic = 1;
 
       if (item.fechaPago) {
         entry.ultimaFecha = item.fechaPago;
@@ -107,15 +104,23 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       else if (client.ago === 1) mesInicial = 'AGOSTO';
       else if (client.sep === 1) mesInicial = 'SEPTIEMBRE';
       else if (client.oct === 1) mesInicial = 'OCTUBRE';
+      else if (client.nov === 1) mesInicial = 'NOVIEMBRE';
+      else if (client.dic === 1) mesInicial = 'DICIEMBRE';
 
-      const mesesEvaluar = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE'];
+      const mesesEvaluar = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
       const startIndex = mesesEvaluar.indexOf(mesInicial);
       let cuotasDebidas = 0;
 
       if (startIndex !== -1) {
-        const valores = [client.jul, client.ago, client.sep, client.oct];
-        for (let i = startIndex; i < valores.length; i++) {
-          if (valores[i] === 0) cuotasDebidas++;
+        // Octubre es el mes actual evaluado (índice 3 en el arreglo de 6 meses)
+        // Solo evaluamos hasta el mes actual (Octubre -> índice 3) para el cálculo de deuda
+        const maxIndexActual = 3; 
+        const valores = [client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
+        
+        for (let i = startIndex; i <= Math.min(startIndex + (maxIndexActual - startIndex), maxIndexActual); i++) {
+          if (i < valores.length && valores[i] === 0) {
+            cuotasDebidas++;
+          }
         }
       }
 
@@ -166,6 +171,8 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       if (selectedMonth === 'AGOSTO') matchMonth = item.mesInicial === 'AGOSTO';
       if (selectedMonth === 'SEPTIEMBRE') matchMonth = item.mesInicial === 'SEPTIEMBRE';
       if (selectedMonth === 'OCTUBRE') matchMonth = item.mesInicial === 'OCTUBRE';
+      if (selectedMonth === 'NOVIEMBRE') matchMonth = item.mesInicial === 'NOVIEMBRE';
+      if (selectedMonth === 'DICIEMBRE') matchMonth = item.mesInicial === 'DICIEMBRE';
 
       return matchSearch && matchBanco && matchStatus && matchMonth;
     });
@@ -206,6 +213,8 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
             { key: 'AGOSTO', label: 'AGOSTO', count: consolidatedAsegurados.filter(i => i.mesInicial === 'AGOSTO').length },
             { key: 'SEPTIEMBRE', label: 'SEPTIEMBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'SEPTIEMBRE').length },
             { key: 'OCTUBRE', label: 'OCTUBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'OCTUBRE').length },
+            { key: 'NOVIEMBRE', label: 'NOVIEMBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'NOVIEMBRE').length },
+            { key: 'DICIEMBRE', label: 'DICIEMBRE', count: consolidatedAsegurados.filter(i => i.mesInicial === 'DICIEMBRE').length },
           ].map(tab => (
             <button
               key={tab.key}
@@ -338,12 +347,12 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
                         {item.banco || '-'}
                       </span>
                     </td>
-                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.jul > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.jul}</td>
-                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.ago > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.ago}</td>
-                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.sep > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.sep}</td>
-                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.oct > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.oct}</td>
-                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.nov > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.nov}</td>
-                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: item.dic > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.dic}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: Number(item.jul) > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.jul}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: Number(item.ago) > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.ago}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: Number(item.sep) > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.sep}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: Number(item.oct) > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.oct}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: Number(item.nov) > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.nov}</td>
+                    <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: Number(item.dic) > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.dic}</td>
                     <td style={{ padding: '0.55rem 0.8rem', whiteSpace: 'nowrap' }}>
                       <span style={{
                         fontSize: '0.65rem',
