@@ -50,12 +50,12 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
     const map = new Map<string, any>();
     const mesesNombres = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
-    // Consolidar TODOS los registros de una misma Cédula en un único renglón unificado
+    // Agrupar estrictamente por Cédula para generar un único renglón por asegurado
     asegurados.forEach(item => {
-      const key = String(item.cedula || item.nombreApellido || Math.random()).trim();
+      const cedulaKey = String(item.cedula || item.nombreApellido || Math.random()).trim();
       
-      if (!map.has(key)) {
-        map.set(key, {
+      if (!map.has(cedulaKey)) {
+        map.set(cedulaKey, {
           ...item,
           jul: 0, ago: 0, sep: 0, oct: 0, nov: 0, dic: 0,
           mesInicial: 'JULIO',
@@ -63,7 +63,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         });
       }
 
-      const entry = map.get(key)!;
+      const entry = map.get(cedulaKey)!;
       const fecha = String(item.fechaPago || '');
       const itemAny = item as any;
       const mesTexto = String(item.mes || '').toUpperCase();
@@ -88,11 +88,11 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         const targetIndex = startIndex + i;
         if (targetIndex >= 6 && targetIndex < 12) {
           const matrixKey = matrixKeys[targetIndex - 6];
-          entry[matrixKey] = 1; // Marcar como pagado ese mes
+          entry[matrixKey] = 1; // Marcar el mes correspondiente
         }
       }
 
-      // Guardar la fecha de pago más antigua como la fecha inicial de emisión
+      // Mantener siempre la fecha de pago más antigua como la fecha inicial de emisión
       const parseDate = (d: string) => {
         if (!d || d === '-') return 0;
         const p = d.split('/');
@@ -114,7 +114,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       const mesesColsList = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
       const valArr = [client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
       
-      // Mes inicial real (primer mes donde tenga un 1)
+      // Mes inicial real (primer mes con valor 1)
       let mesInicialIndex = valArr.findIndex(v => v === 1);
       if (mesInicialIndex === -1) mesInicialIndex = 3;
 
