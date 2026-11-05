@@ -8,7 +8,7 @@ import { Header } from '@/components/Header';
 import { KpiCards } from '@/components/KpiCards';
 import { RecurrenceMatrix } from '@/components/RecurrenceMatrix';
 import { SeguimientoCobranzas } from '@/components/SeguimientoCobranzas';
-import { ReceiptModal } from '@/components/ReceiptModal'; // Este archivo ahora es el formulario de edición interactivo
+import { ReceiptModal } from '@/components/ReceiptModal';
 import { NewPaymentModal } from '@/components/NewPaymentModal';
 
 export default function Home() {
@@ -50,8 +50,8 @@ export default function Home() {
       if (!map.has(key)) {
         map.set(key, { 
           ...item, 
-          ene: 0, feb: 0, mar: 0, abr: 0, may: 0, jun: 0, 
-          jul: 0, ago: 0, sep: 0, oct: 0, nov: 0, dic: 0 
+          jul: 0, ago: 0, sep: 0, oct: 0, nov: 0, dic: 0,
+          fechaPago: item.fechaPago || '-'
         });
       }
       const entry = map.get(key)!;
@@ -62,13 +62,7 @@ export default function Home() {
 
       let startIndex = mesesNombres.findIndex(m => mesTexto.includes(m));
       if (startIndex === -1) {
-        if (fecha.includes('/1/')) startIndex = 0;
-        else if (fecha.includes('/2/')) startIndex = 1;
-        else if (fecha.includes('/3/')) startIndex = 2;
-        else if (fecha.includes('/4/')) startIndex = 3;
-        else if (fecha.includes('/5/')) startIndex = 4;
-        else if (fecha.includes('/6/')) startIndex = 5;
-        else if (fecha.includes('/7/')) startIndex = 6;
+        if (fecha.includes('/7/')) startIndex = 6;
         else if (fecha.includes('/8/')) startIndex = 7;
         else if (fecha.includes('/9/')) startIndex = 8;
         else if (fecha.includes('/10/')) startIndex = 9;
@@ -77,30 +71,49 @@ export default function Home() {
         else startIndex = 9; // Octubre por defecto
       }
 
-      const keysMeses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      const matrixKeys = ['jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
       for (let i = 0; i < cuotasPagadas; i++) {
         const targetIndex = startIndex + i;
-        if (targetIndex < keysMeses.length) {
-          entry[keysMeses[targetIndex]] = 1;
+        if (targetIndex >= 6 && targetIndex < 12) {
+          const matrixKey = matrixKeys[targetIndex - 6];
+          entry[matrixKey] = 1;
         }
       }
 
-      if (item.fechaPago) entry.ultimaFecha = item.fechaPago;
+      if (item.fechaPago && item.fechaPago !== '-') {
+        entry.fechaPago = item.fechaPago;
+      }
     });
 
     return Array.from(map.values()).map(client => {
-      const keysMeses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-      const valores = [client.ene, client.feb, client.mar, client.abr, client.may, client.jun, client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
+      const mesesColsList = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+      const valArr = [client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
       
-      let mesInicialIndex = valores.findIndex(v => v === 1);
-      if (mesInicialIndex === -1) mesInicialIndex = 9;
-      let mesInicial = keysMeses[mesInicialIndex];
+      let mesInicialIndex = valArr.findIndex(v => v === 1);
+      if (mesInicialIndex === -1) mesInicialIndex = 3;
+
+      let mesInicial = mesesColsList[mesInicialIndex];
+
+      // Cálculo de cuotas debidas hasta Noviembre (índice 4)
+      const currentIndex = 4;
+      let cuotasDebidas = 0;
+      const limitIndex = Math.min(currentIndex, 5);
+
+      for (let i = mesInicialIndex; i <= limitIndex; i++) {
+        if (valArr[i] === 0) {
+          cuotasDebidas++;
+        }
+      }
+
+      let estatusCalculado = 'Solvente';
+      if (cuotasDebidas === 1) estatusCalculado = 'Debe 1 Cuota';
+      else if (cuotasDebidas > 1) estatusCalculado = `Debe ${cuotasDebidas} Cuotas`;
 
       return { 
         ...client, 
         mesInicial, 
-        estatusCalculado: 'Solvente', 
-        cuotasDebidas: 0 
+        estatusCalculado, 
+        cuotasDebidas 
       };
     });
   }, [asegurados]);
