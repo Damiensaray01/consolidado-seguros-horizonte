@@ -17,7 +17,7 @@ export default function Home() {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState(false);
 
-  const [asegurados, setAsegurados] = useState<Asegurado[]>([]);
+  const [rawAsegurados, setRawAsegurados] = useState<Asegurado[]>([]);
   const [selectedAsegurado, setSelectedAsegurado] = useState<Asegurado | null>(null);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   
@@ -35,54 +35,75 @@ export default function Home() {
         id: doc.id,
         ...doc.data()
       }));
-      setAsegurados(data);
+      setRawAsegurados(data);
     });
 
     return () => unsubscribe();
   }, [isAuthenticated]);
 
-  const consolidatedAsegurados = useMemo(() => {
+  // Consolidación global estricta por Cédula para unificar todos los pagos en un solo registro por persona
+  const asegurados = useMemo(() => {
     const map = new Map<string, any>();
     const mesesNombres = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
-    asegurados.forEach(item => {
-      const key = String(item.cedula || item.nombreApellido || Math.random()).trim();
-      if (!map.has(key)) {
-        map.set(key, { 
-          ...item, 
+    rawAsegurados.forEach(item => {
+      const cedulaKey = String(item.cedula || item.nombreApellido || '').trim();
+      if (!cedulaKey) return;
+
+      if (!map.has(cedulaKey)) {
+        map.set(cedulaKey, {
+          ...item,
           jul: 0, ago: 0, sep: 0, oct: 0, nov: 0, dic: 0,
+          mesInicial: 'JULIO',
           fechaPago: item.fechaPago || '-'
         });
       }
-      const entry = map.get(key)!;
+
+      const entry = map.get(cedulaKey)!;
+      const fecha = String(item.fechaPago || '');
       const itemAny = item as any;
       const mesTexto = String(item.mes || '').toUpperCase();
-      const fecha = String(item.fechaPago || '');
       const cuotasPagadas = Number(itemAny.cuotasPagadas || 1);
 
-      let startIndex = mesesNombres.findIndex(m => mesTexto.includes(m));
-      if (startIndex === -1) {
-        if (fecha.includes('/7/')) startIndex = 6;
-        else if (fecha.includes('/8/')) startIndex = 7;
-        else if (fecha.includes('/9/')) startIndex = 8;
-        else if (fecha.includes('/10/')) startIndex = 9;
-        else if (fecha.includes('/11/')) startIndex = 10;
-        else if (fecha.includes('/12/')) startIndex = 11;
-        else startIndex = 9;
+      let startIndex = -1;
+      if (fecha.includes('/7/')) startIndex = 6;
+      else if (fecha.includes('/8/')) startIndex = 7;
+      else if (fecha.includes('/9/')) startIndex = 8;
+      else if (fecha.includes('/10/')) startIndex = 9;
+      else if (fecha.includes('/11/')) startIndex = 10;
+      else if (fecha.includes('/12/')) startIndex = 11;
+      else {
+        startIndex = mesesNombres.findIndex(m => mesTexto.includes(m));
       }
 
+      if (startIndex === -1) startIndex = 9; // Octubre por defecto
+
       const matrixKeys = ['jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
       for (let i = 0; i < cuotasPagadas; i++) {
         const targetIndex = startIndex + i;
         if (targetIndex >= 6 && targetIndex < 12) {
           const matrixKey = matrixKeys[targetIndex - 6];
-          entry[matrixKey] = 1;
+          entry[matrixKey] = 1; // Marcar el mes pagado
         }
       }
 
-      if (item.fechaPago && item.fechaPago !== '-') {
+      // Mantener siempre la fecha de pago más antigua como la fecha de emisión/inicio oficial
+      const parseDate = (d: string) => {
+        if (!d || d === '-') return 0;
+        const p = d.split('/');
+        return p.length === 3 ? new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0])).getTime() : 0;
+      };
+
+      const currentFechaTime = parseDate(entry.fechaPago);
+      const itemFechaTime = parseDate(item.fechaPago);
+
+      if (itemFechaTime > 0 && (currentFechaTime === 0 || itemFechaTime < currentFechaTime)) {
         entry.fechaPago = item.fechaPago;
       }
+
+      if (item.banco) entry.banco = item.banco;
+      if (item.uds) entry.uds = item.uds;
     });
 
     return Array.from(map.values()).map(client => {
@@ -94,7 +115,6 @@ export default function Home() {
 
       let mesInicial = mesesColsList[mesInicialIndex];
 
-      // Verificamos el último mes pagado registrado en la matriz
       let ultimoMesPagadoIndex = -1;
       for (let i = valArr.length - 1; i >= 0; i--) {
         if (valArr[i] === 1) {
@@ -103,16 +123,12 @@ export default function Home() {
         }
       }
 
-      // Mes actual de gestión operativo (Noviembre = índice 4)
-      const currentIndex = 4; 
+      const currentIndex = 4; // Noviembre (índice 4)
       let cuotasDebidas = 0;
 
-      // Si el último mes pagado es anterior al mes actual y no tiene cubierto el mes en curso
       if (ultimoMesPagadoIndex !== -1 && ultimoMesPagadoIndex < currentIndex) {
-        // Permitimos un margen si pagó a finales del mes anterior y su próxima cuota vence a fin de este mes
-        const ultimaFechaStr = String(client.fechaPago || '');
-        if (ultimaFechaStr.startsWith('30/') || ultimaFechaStr.startsWith('31/')) {
-          // Si pagó el 30 o 31, cuenta con el mes en curso cubierto hasta su vencimiento
+        const fechaStr = String(client.fechaPago || '');
+        if (fechaStr.startsWith('30/') || fechaStr.startsWith('31/')) {
           cuotasDebidas = Math.max(0, currentIndex - (ultimoMesPagadoIndex + 1));
         } else {
           cuotasDebidas = currentIndex - ultimoMesPagadoIndex;
@@ -125,14 +141,14 @@ export default function Home() {
       if (cuotasDebidas === 1) estatusCalculado = 'Debe 1 Cuota';
       else if (cuotasDebidas > 1) estatusCalculado = `Debe ${cuotasDebidas} Cuotas`;
 
-      return { 
-        ...client, 
-        mesInicial, 
-        estatusCalculado, 
-        cuotasDebidas 
+      return {
+        ...client,
+        mesInicial,
+        estatusCalculado,
+        cuotasDebidas
       };
     });
-  }, [asegurados]);
+  }, [rawAsegurados]);
 
   if (!isAuthenticated) {
     return (
@@ -260,7 +276,7 @@ export default function Home() {
         {activeTab === 'consolidado' ? (
           <>
             <KpiCards 
-              asegurados={consolidatedAsegurados} 
+              asegurados={asegurados} 
               selectedStatus={globalStatus}
               onSelectStatus={(st) => setGlobalStatus(st)}
               selectedMonth={globalMonth}
