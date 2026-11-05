@@ -8,8 +8,8 @@ import { Header } from '@/components/Header';
 import { KpiCards } from '@/components/KpiCards';
 import { RecurrenceMatrix } from '@/components/RecurrenceMatrix';
 import { SeguimientoCobranzas } from '@/components/SeguimientoCobranzas';
+import { ReceiptModal } from '@/components/ReceiptModal'; // Este archivo ahora es el formulario de edición interactivo
 import { NewPaymentModal } from '@/components/NewPaymentModal';
-import { EditPaymentModal } from '@/components/EditPaymentModal';
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -74,10 +74,9 @@ export default function Home() {
         else if (fecha.includes('/10/')) startIndex = 9;
         else if (fecha.includes('/11/')) startIndex = 10;
         else if (fecha.includes('/12/')) startIndex = 11;
-        else startIndex = 9; // Por defecto Octubre si no especifica
+        else startIndex = 9; // Octubre por defecto
       }
 
-      // Marcar los meses consecutivos según las cuotas pagadas (duplicidad de recurrencia)
       const keysMeses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
       for (let i = 0; i < cuotasPagadas; i++) {
         const targetIndex = startIndex + i;
@@ -94,7 +93,7 @@ export default function Home() {
       const valores = [client.ene, client.feb, client.mar, client.abr, client.may, client.jun, client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
       
       let mesInicialIndex = valores.findIndex(v => v === 1);
-      if (mesInicialIndex === -1) mesInicialIndex = 9; // Octubre por defecto
+      if (mesInicialIndex === -1) mesInicialIndex = 9;
       let mesInicial = keysMeses[mesInicialIndex];
 
       return { 
@@ -253,7 +252,7 @@ export default function Home() {
 
       </div>
 
-      <EditPaymentModal asegurado={selectedAsegurado} onClose={() => setSelectedAsegurado(null)} />
+      <ReceiptModal asegurado={selectedAsegurado} onClose={() => setSelectedAsegurado(null)} />
       <NewPaymentModal isOpen={isNewModalOpen} onClose={() => setIsNewModalOpen(false)} />
     </main>
   );
