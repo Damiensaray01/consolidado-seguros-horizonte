@@ -68,7 +68,7 @@ export default function Home() {
         else if (fecha.includes('/10/')) startIndex = 9;
         else if (fecha.includes('/11/')) startIndex = 10;
         else if (fecha.includes('/12/')) startIndex = 11;
-        else startIndex = 9; // Octubre por defecto
+        else startIndex = 9;
       }
 
       const matrixKeys = ['jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -94,15 +94,31 @@ export default function Home() {
 
       let mesInicial = mesesColsList[mesInicialIndex];
 
-      // Cálculo de cuotas debidas hasta Noviembre (índice 4)
-      const currentIndex = 4;
-      let cuotasDebidas = 0;
-      const limitIndex = Math.min(currentIndex, 5);
-
-      for (let i = mesInicialIndex; i <= limitIndex; i++) {
-        if (valArr[i] === 0) {
-          cuotasDebidas++;
+      // Verificamos el último mes pagado registrado en la matriz
+      let ultimoMesPagadoIndex = -1;
+      for (let i = valArr.length - 1; i >= 0; i--) {
+        if (valArr[i] === 1) {
+          ultimoMesPagadoIndex = i;
+          break;
         }
+      }
+
+      // Mes actual de gestión operativo (Noviembre = índice 4)
+      const currentIndex = 4; 
+      let cuotasDebidas = 0;
+
+      // Si el último mes pagado es anterior al mes actual y no tiene cubierto el mes en curso
+      if (ultimoMesPagadoIndex !== -1 && ultimoMesPagadoIndex < currentIndex) {
+        // Permitimos un margen si pagó a finales del mes anterior y su próxima cuota vence a fin de este mes
+        const ultimaFechaStr = String(client.fechaPago || '');
+        if (ultimaFechaStr.startsWith('30/') || ultimaFechaStr.startsWith('31/')) {
+          // Si pagó el 30 o 31, cuenta con el mes en curso cubierto hasta su vencimiento
+          cuotasDebidas = Math.max(0, currentIndex - (ultimoMesPagadoIndex + 1));
+        } else {
+          cuotasDebidas = currentIndex - ultimoMesPagadoIndex;
+        }
+      } else if (ultimoMesPagadoIndex === -1) {
+        cuotasDebidas = 1;
       }
 
       let estatusCalculado = 'Solvente';

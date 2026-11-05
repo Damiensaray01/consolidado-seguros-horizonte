@@ -75,7 +75,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         else if (fecha.includes('/10/')) startIndex = 9;
         else if (fecha.includes('/11/')) startIndex = 10;
         else if (fecha.includes('/12/')) startIndex = 11;
-        else startIndex = 9; // Octubre por defecto
+        else startIndex = 9;
       }
 
       const matrixKeys = ['jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -100,19 +100,30 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       const valArr = [client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
       
       let mesInicialIndex = valArr.findIndex(v => v === 1);
-      if (mesInicialIndex === -1) mesInicialIndex = 3; // Octubre por defecto
+      if (mesInicialIndex === -1) mesInicialIndex = 3;
 
       let mesInicial = mesesColsList[mesInicialIndex];
 
-      // Cálculo dinámico de cuotas debidas hasta el mes actual (Noviembre = índice 4)
-      const currentIndex = 4; 
-      let cuotasDebidas = 0;
-      const limitIndex = Math.min(currentIndex, 5);
-
-      for (let i = mesInicialIndex; i <= limitIndex; i++) {
-        if (valArr[i] === 0) {
-          cuotasDebidas++;
+      let ultimoMesPagadoIndex = -1;
+      for (let i = valArr.length - 1; i >= 0; i--) {
+        if (valArr[i] === 1) {
+          ultimoMesPagadoIndex = i;
+          break;
         }
+      }
+
+      const currentIndex = 4; // Noviembre
+      let cuotasDebidas = 0;
+
+      if (ultimoMesPagadoIndex !== -1 && ultimoMesPagadoIndex < currentIndex) {
+        const ultimaFechaStr = String(client.fechaPago || '');
+        if (ultimaFechaStr.startsWith('30/') || ultimaFechaStr.startsWith('31/')) {
+          cuotasDebidas = Math.max(0, currentIndex - (ultimoMesPagadoIndex + 1));
+        } else {
+          cuotasDebidas = currentIndex - ultimoMesPagadoIndex;
+        }
+      } else if (ultimoMesPagadoIndex === -1) {
+        cuotasDebidas = 1;
       }
 
       let estatusCalculado = 'Solvente';
