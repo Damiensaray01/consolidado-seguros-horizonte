@@ -15,7 +15,8 @@ export const NewPaymentModal: React.FC<NewPaymentModalProps> = ({ isOpen, onClos
   const [telefono, setTelefono] = useState('');
   const [uds, setUds] = useState('5.99');
   const [banco, setBanco] = useState('BANCO PLAZA');
-  const [mes, setMes] = useState('OCTUBRE');
+  const [mesInicio, setMesInicio] = useState('OCTUBRE');
+  const [cantidadCuotas, setCantidadCuotas] = useState('1');
   const [fechaPago, setFechaPago] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -25,21 +26,28 @@ export const NewPaymentModal: React.FC<NewPaymentModalProps> = ({ isOpen, onClos
     e.preventDefault();
     setLoading(true);
     try {
+      const cuotasNum = parseInt(cantidadCuotas) || 1;
+      const baseUds = parseFloat(uds) || 5.99;
+      const montoTotal = baseUds * cuotasNum;
+
       await addDoc(collection(db, 'consolidado_pagos'), {
         nombreApellido: nombreApellido.toUpperCase(),
         cedula,
         telefono: telefono || '-',
-        uds: parseFloat(uds) * 100,
+        uds: Math.round(montoTotal * 100),
         banco,
-        mes: mes.toUpperCase(),
+        mes: mesInicio.toUpperCase(),
+        cuotasPagadas: cuotasNum,
         fechaPago: fechaPago || new Date().toLocaleDateString()
       });
+
       setLoading(false);
       onClose();
       setNombreApellido('');
       setCedula('');
       setTelefono('');
       setFechaPago('');
+      setCantidadCuotas('1');
     } catch (error) {
       console.error("Error al registrar pago:", error);
       setLoading(false);
@@ -54,12 +62,12 @@ export const NewPaymentModal: React.FC<NewPaymentModalProps> = ({ isOpen, onClos
     }}>
       <div style={{
         backgroundColor: '#ffffff', padding: '2rem', borderRadius: '0.75rem',
-        width: '100%', maxWidth: '460px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)',
-        boxSizing: 'border-box', border: '1px solid #cbd5e1'
+        width: '100%', maxWidth: '520px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)',
+        boxSizing: 'border-box', border: '1px solid #cbd5e1', maxHeight: '90vh', overflowY: 'auto'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
           <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#0f172a' }}>
-            Nuevo Registro de Pago
+            Nuevo Registro de Pago y Recurrencia
           </h3>
           <button 
             type="button"
@@ -109,7 +117,7 @@ export const NewPaymentModal: React.FC<NewPaymentModalProps> = ({ isOpen, onClos
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '0.2rem' }}>Cuota ($)</label>
+              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '0.2rem' }}>Cuota Base ($)</label>
               <input 
                 type="number" 
                 step="0.01"
@@ -135,12 +143,18 @@ export const NewPaymentModal: React.FC<NewPaymentModalProps> = ({ isOpen, onClos
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '0.2rem' }}>Mes Inicial / Registro</label>
+              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '0.2rem' }}>Mes Inicial</label>
               <select 
-                value={mes} 
-                onChange={e => setMes(e.target.value)}
+                value={mesInicio} 
+                onChange={e => setMesInicio(e.target.value)}
                 style={{ width: '100%', padding: '0.55rem 0.7rem', borderRadius: '0.35rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box', backgroundColor: '#fff', outline: 'none' }}
               >
+                <option value="ENERO">Enero</option>
+                <option value="FEBRERO">Febrero</option>
+                <option value="MARZO">Marzo</option>
+                <option value="ABRIL">Abril</option>
+                <option value="MAYO">Mayo</option>
+                <option value="JUNIO">Junio</option>
                 <option value="JULIO">Julio</option>
                 <option value="AGOSTO">Agosto</option>
                 <option value="SEPTIEMBRE">Septiembre</option>
@@ -150,18 +164,40 @@ export const NewPaymentModal: React.FC<NewPaymentModalProps> = ({ isOpen, onClos
               </select>
             </div>
             <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '0.2rem' }}>Fecha de Pago</label>
-              <input 
-                type="text" 
-                placeholder="Ej. 31/10/2026"
-                value={fechaPago} 
-                onChange={e => setFechaPago(e.target.value)}
-                style={{ width: '100%', padding: '0.55rem 0.7rem', borderRadius: '0.35rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none', backgroundColor: '#f8fafc' }}
-              />
+              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '0.2rem' }}>Cantidad de Cuotas</label>
+              <select 
+                value={cantidadCuotas} 
+                onChange={e => setCantidadCuotas(e.target.value)}
+                style={{ width: '100%', padding: '0.55rem 0.7rem', borderRadius: '0.35rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box', backgroundColor: '#fff', outline: 'none' }}
+              >
+                <option value="1">1 Cuota</option>
+                <option value="2">2 Cuotas</option>
+                <option value="3">3 Cuotas</option>
+                <option value="4">4 Cuotas</option>
+                <option value="5">5 Cuotas</option>
+                <option value="6">6 Cuotas</option>
+                <option value="7">7 Cuotas</option>
+                <option value="8">8 Cuotas</option>
+                <option value="9">9 Cuotas</option>
+                <option value="10">10 Cuotas</option>
+                <option value="11">11 Cuotas</option>
+                <option value="12">Pago Completo (12 Cuotas)</option>
+              </select>
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.2rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.8rem' }}>
+          <div>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '0.2rem' }}>Fecha de Pago</label>
+            <input 
+              type="text" 
+              placeholder="Ej. 31/10/2026"
+              value={fechaPago} 
+              onChange={e => setFechaPago(e.target.value)}
+              style={{ width: '100%', padding: '0.55rem 0.7rem', borderRadius: '0.35rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box', outline: 'none', backgroundColor: '#f8fafc' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem' }}>
             <button 
               type="button" 
               onClick={onClose}
