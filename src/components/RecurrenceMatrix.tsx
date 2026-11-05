@@ -47,6 +47,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
 
   const consolidatedAsegurados = useMemo(() => {
     const map = new Map<string, any>();
+    const mesesNombres = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
     asegurados.forEach(item => {
       const key = String(item.cedula || item.nombreApellido || Math.random()).trim();
@@ -66,19 +67,26 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       const fecha = String(item.fechaPago || '');
       const cuotasPagadas = Number(itemAny.cuotasPagadas || 1);
 
-      let startIndex = 3; // Octubre por defecto
-      if (mesTexto.includes('JULIO') || fecha.includes('/7/')) startIndex = 0;
-      else if (mesTexto.includes('AGOSTO') || fecha.includes('/8/')) startIndex = 1;
-      else if (mesTexto.includes('SEPTIEMBRE') || fecha.includes('/9/')) startIndex = 2;
-      else if (mesTexto.includes('OCTUBRE') || fecha.includes('/10/')) startIndex = 3;
-      else if (mesTexto.includes('NOVIEMBRE') || fecha.includes('/11/')) startIndex = 4;
-      else if (mesTexto.includes('DICIEMBRE') || fecha.includes('/12/')) startIndex = 5;
+      let startIndex = mesesNombres.findIndex(m => mesTexto.includes(m));
+      if (startIndex === -1) {
+        if (fecha.includes('/7/')) startIndex = 6;
+        else if (fecha.includes('/8/')) startIndex = 7;
+        else if (fecha.includes('/9/')) startIndex = 8;
+        else if (fecha.includes('/10/')) startIndex = 9;
+        else if (fecha.includes('/11/')) startIndex = 10;
+        else if (fecha.includes('/12/')) startIndex = 11;
+        else startIndex = 9; // Octubre por defecto
+      }
 
-      const keysMeses = ['jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      const keysMeses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      const matrixKeys = ['jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+      // Marcar cuotas (incluyendo pago único / múltiple desde el mes de inicio)
       for (let i = 0; i < cuotasPagadas; i++) {
-        const target = startIndex + i;
-        if (target < keysMeses.length) {
-          entry[keysMeses[target]] = 1;
+        const targetIndex = startIndex + i;
+        if (targetIndex >= 6 && targetIndex < 12) {
+          const matrixKey = matrixKeys[targetIndex - 6];
+          entry[matrixKey] = 1;
         }
       }
 
@@ -90,13 +98,19 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
     });
 
     return Array.from(map.values()).map(client => {
-      let mesInicial = 'JULIO';
-      if (client.jul === 1) mesInicial = 'JULIO';
-      else if (client.ago === 1) mesInicial = 'AGOSTO';
-      else if (client.sep === 1) mesInicial = 'SEPTIEMBRE';
-      else if (client.oct === 1) mesInicial = 'OCTUBRE';
-      else if (client.nov === 1) mesInicial = 'NOVIEMBRE';
-      else if (client.dic === 1) mesInicial = 'DICIEMBRE';
+      let mesInicialIndex = -1;
+      const mesesColsList = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+      const valArr = [client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
+      
+      const firstActive = valArr.findIndex(v => v === 1);
+      if (firstActive !== -1) {
+        mesInicialIndex = firstActive;
+      }
+
+      let mesInicial = 'OCTUBRE';
+      if (mesInicialIndex !== -1) {
+        mesInicial = mesesColsList[mesInicialIndex];
+      }
 
       return {
         ...client,
@@ -326,17 +340,3 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
                       <button
                         onClick={() => onSelectAsegurado(item)}
                         style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '0.25rem 0.5rem', borderRadius: '0.3rem', fontSize: '0.7rem', fontWeight: 600, color: '#334155', cursor: 'pointer' }}
-                      >
-                        ✏️ Editar
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
