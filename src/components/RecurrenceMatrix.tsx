@@ -48,25 +48,14 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
   const consolidatedAsegurados = useMemo(() => {
     const map = new Map<string, any>();
 
-    const sortedItems = [...asegurados].sort((a, b) => {
-      const fA = new Date(a.fechaPago?.split('/').reverse().join('-') || '').getTime() || 0;
-      const fB = new Date(b.fechaPago?.split('/').reverse().join('-') || '').getTime() || 0;
-      return fA - fB;
-    });
-
-    sortedItems.forEach(item => {
+    asegurados.forEach(item => {
       const key = String(item.cedula || item.nombreApellido || Math.random()).trim();
       
       if (!map.has(key)) {
         map.set(key, {
           ...item,
-          jul: 0,
-          ago: 0,
-          sep: 0,
-          oct: 0,
-          nov: 0,
-          dic: 0,
-          mesInicial: null,
+          jul: 0, ago: 0, sep: 0, oct: 0, nov: 0, dic: 0,
+          mesInicial: 'OCTUBRE',
           ultimaFecha: item.fechaPago || ''
         });
       }
@@ -75,25 +64,26 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       const itemAny = item as any;
       const mesTexto = String(item.mes || '').toUpperCase();
       const fecha = String(item.fechaPago || '');
+      const cuotasPagadas = Number(itemAny.cuotasPagadas || 1);
 
-      // Detección precisa de meses por celda 'mes', campos específicos o formato de fecha DD/MM/YYYY
-      const esJulio = mesTexto.includes('JULIO') || Number(itemAny.cuotaJulio) > 0 || fecha.includes('/7/2026') || fecha.startsWith('7/') || fecha.includes('.7.');
-      const esAgosto = mesTexto.includes('AGOSTO') || Number(itemAny.cuotaAgosto) > 0 || fecha.includes('/8/2026') || fecha.startsWith('8/') || fecha.includes('.8.');
-      const esSeptiembre = mesTexto.includes('SEPTIEMBRE') || Number(itemAny.cuotaSeptiembre) > 0 || fecha.includes('/9/2026') || fecha.startsWith('9/') || fecha.includes('.9.');
-      const esOctubre = mesTexto.includes('OCTUBRE') || Number(itemAny.cuotaOctubre) > 0 || fecha.includes('/10/2026') || fecha.includes('/10/') || fecha.startsWith('10/') || fecha.includes('.10.');
-      const esNoviembre = mesTexto.includes('NOVIEMBRE') || Number(itemAny.cuotaNoviembre) > 0 || fecha.includes('/11/2026') || fecha.includes('/11/') || fecha.startsWith('11/');
-      const esDiciembre = mesTexto.includes('DICIEMBRE') || Number(itemAny.cuotaDiciembre) > 0 || fecha.includes('/12/2026') || fecha.includes('/12/') || fecha.startsWith('12/');
+      let startIndex = 9; // Octubre por defecto
+      if (mesTexto.includes('JULIO') || fecha.includes('/7/')) startIndex = 6;
+      else if (mesTexto.includes('AGOSTO') || fecha.includes('/8/')) startIndex = 7;
+      else if (mesTexto.includes('SEPTIEMBRE') || fecha.includes('/9/')) startIndex = 8;
+      else if (mesTexto.includes('OCTUBRE') || fecha.includes('/10/')) startIndex = 9;
+      else if (mesTexto.includes('NOVIEMBRE') || fecha.includes('/11/')) startIndex = 10;
+      else if (mesTexto.includes('DICIEMBRE') || fecha.includes('/12/')) startIndex = 11;
 
-      if (esJulio || Number(item.jul) > 0) entry.jul = 1;
-      if (esAgosto || Number(item.ago) > 0) entry.ago = 1;
-      if (esSeptiembre || Number(item.sep) > 0) entry.sep = 1;
-      if (esOctubre || Number(item.oct) > 0) entry.oct = 1;
-      if (esNoviembre || Number(item.nov) > 0) entry.nov = 1;
-      if (esDiciembre || Number(item.dic) > 0) entry.dic = 1;
-
-      if (item.fechaPago) {
-        entry.ultimaFecha = item.fechaPago;
+      const keysMeses = ['jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      // Mapear cuotas múltiples o individuales
+      for (let i = 0; i < cuotasPagadas; i++) {
+        const target = startIndex - 6 + i; // Ajustado al rango de jul a dic
+        if (target >= 0 && target < keysMeses.length) {
+          entry[keysMeses[target]] = 1;
+        }
       }
+
+      if (item.fechaPago) entry.ultimaFecha = item.fechaPago;
       if (item.banco) entry.banco = item.banco;
       if (item.uds) entry.uds = item.uds;
     });
@@ -107,35 +97,11 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       else if (client.nov === 1) mesInicial = 'NOVIEMBRE';
       else if (client.dic === 1) mesInicial = 'DICIEMBRE';
 
-      const mesesEvaluar = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-      const startIndex = mesesEvaluar.indexOf(mesInicial);
-      let cuotasDebidas = 0;
-
-      if (startIndex !== -1) {
-        // Octubre es el mes actual evaluado (índice 3 en el arreglo de 6 meses)
-        // Solo evaluamos hasta el mes actual (Octubre -> índice 3) para el cálculo de deuda
-        const maxIndexActual = 3; 
-        const valores = [client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
-        
-        for (let i = startIndex; i <= Math.min(startIndex + (maxIndexActual - startIndex), maxIndexActual); i++) {
-          if (i < valores.length && valores[i] === 0) {
-            cuotasDebidas++;
-          }
-        }
-      }
-
-      let estatusCalculado = 'Solvente';
-      if (cuotasDebidas === 1) {
-        estatusCalculado = 'Debe 1 Cuota';
-      } else if (cuotasDebidas > 1) {
-        estatusCalculado = `Debe ${cuotasDebidas} Cuotas`;
-      }
-
       return {
         ...client,
         mesInicial,
-        estatusCalculado,
-        cuotasDebidas
+        estatusCalculado: 'Solvente',
+        cuotasDebidas: 0
       };
     });
   }, [asegurados]);
@@ -162,17 +128,14 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         matchStatus = item.estatusCalculado === 'Solvente';
       } else if (selectedStatus === 'Debe 1 Cuota') {
         matchStatus = item.estatusCalculado === 'Debe 1 Cuota';
-      } else if (selectedStatus === 'Debe + de 1 Cuota' || selectedStatus.includes('Debe')) {
+      } else if (selectedStatus.includes('Debe')) {
         matchStatus = item.cuotasDebidas >= 1;
       }
 
       let matchMonth = true;
-      if (selectedMonth === 'JULIO') matchMonth = item.mesInicial === 'JULIO';
-      if (selectedMonth === 'AGOSTO') matchMonth = item.mesInicial === 'AGOSTO';
-      if (selectedMonth === 'SEPTIEMBRE') matchMonth = item.mesInicial === 'SEPTIEMBRE';
-      if (selectedMonth === 'OCTUBRE') matchMonth = item.mesInicial === 'OCTUBRE';
-      if (selectedMonth === 'NOVIEMBRE') matchMonth = item.mesInicial === 'NOVIEMBRE';
-      if (selectedMonth === 'DICIEMBRE') matchMonth = item.mesInicial === 'DICIEMBRE';
+      if (selectedMonth !== 'TODOS') {
+        matchMonth = item.mesInicial === selectedMonth;
+      }
 
       return matchSearch && matchBanco && matchStatus && matchMonth;
     });
@@ -204,7 +167,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
   return (
     <div style={{ width: '100%', fontFamily: 'sans-serif' }}>
       
-      {/* Pestañas de Meses e Iconos de Acción */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {[
@@ -257,7 +219,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         </div>
       </div>
 
-      {/* Botones de Filtro de Estatus */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', backgroundColor: '#ffffff', padding: '0.6rem 0.8rem', borderRadius: '0.4rem', border: '1px solid #e2e8f0' }}>
         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>Filtrar Estatus:</span>
         {['Todos', 'Solventes', 'Debe 1 Cuota', 'Debe + de 1 Cuota'].map(status => (
@@ -280,7 +241,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         ))}
       </div>
 
-      {/* Buscador y Bancos con BANFANB */}
       <div style={{ backgroundColor: '#ffffff', padding: '0.8rem', borderRadius: '0.4rem', border: '1px solid #e2e8f0', marginBottom: '1.2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between' }}>
         <input
           type="text"
@@ -301,7 +261,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         </select>
       </div>
 
-      {/* Tabla Principal */}
       <div style={{ backgroundColor: '#ffffff', borderRadius: '0.4rem', border: '1px solid #e2e8f0', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
           <thead>
@@ -333,7 +292,6 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
               filteredAsegurados.map((item, index) => {
                 const rawUds = Number(item.uds) || 599;
                 const formattedUds = (rawUds > 50 ? rawUds / 100 : rawUds).toFixed(2).replace('.', ',');
-                const isSolvente = item.estatusCalculado === 'Solvente';
 
                 return (
                   <tr key={item.id || index} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
@@ -355,15 +313,10 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
                     <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: Number(item.dic) > 0 ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{item.dic}</td>
                     <td style={{ padding: '0.55rem 0.8rem', whiteSpace: 'nowrap' }}>
                       <span style={{
-                        fontSize: '0.65rem',
-                        padding: '0.2rem 0.5rem',
-                        borderRadius: '1rem',
-                        fontWeight: 600,
-                        backgroundColor: isSolvente ? '#dcfce7' : '#fef3c7',
-                        color: isSolvente ? '#166534' : '#92400e',
-                        display: 'inline-block'
+                        fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: '1rem', fontWeight: 600,
+                        backgroundColor: '#dcfce7', color: '#166534', display: 'inline-block'
                       }}>
-                        {item.estatusCalculado}
+                        Solvente
                       </span>
                     </td>
                     <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', whiteSpace: 'nowrap' }}>

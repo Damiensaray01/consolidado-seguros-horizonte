@@ -10,7 +10,7 @@ interface SeguimientoCobranzasProps {
 export const SeguimientoCobranzas: React.FC<SeguimientoCobranzasProps> = ({ asegurados }) => {
   const dataSeguimiento = useMemo(() => {
     const mesesCols = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-    const gestionMeses = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE'];
+    const gestionMeses = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE'];
     const indexMap: { [key: string]: number } = { 'JULIO': 0, 'AGOSTO': 1, 'SEPTIEMBRE': 2, 'OCTUBRE': 3, 'NOVIEMBRE': 4, 'DICIEMBRE': 5 };
 
     const clientMap = new Map<string, any>();
@@ -26,13 +26,25 @@ export const SeguimientoCobranzas: React.FC<SeguimientoCobranzasProps> = ({ aseg
       }
       const entry = clientMap.get(key)!;
       const itemAny = item as any;
+      const mesTexto = String(item.mes || '').toUpperCase();
+      const fecha = String(item.fechaPago || '');
+      const cuotasPagadas = Number(itemAny.cuotasPagadas || 1);
 
-      if (Number(itemAny.cuotaJulio || (item.mes?.toUpperCase().includes('JULIO') ? 1 : 0) || (item.jul || 0)) > 0 || String(item.fechaPago || '').includes('/7/2026')) entry.jul = 1;
-      if (Number(itemAny.cuotaAgosto || (item.mes?.toUpperCase().includes('AGOSTO') ? 1 : 0) || (item.ago || 0)) > 0 || String(item.fechaPago || '').includes('/8/2026')) entry.ago = 1;
-      if (Number(itemAny.cuotaSeptiembre || (item.mes?.toUpperCase().includes('SEPTIEMBRE') ? 1 : 0) || (item.sep || 0)) > 0 || String(item.fechaPago || '').includes('/9/2026')) entry.sep = 1;
-      if (Number(itemAny.cuotaOctubre || (item.mes?.toUpperCase().includes('OCTUBRE') ? 1 : 0) || (item.oct || 0)) > 0 || String(item.fechaPago || '').includes('/10/2026')) entry.oct = 1;
-      if (Number(itemAny.cuotaNoviembre || (item.mes?.toUpperCase().includes('NOVIEMBRE') ? 1 : 0) || (item.nov || 0)) > 0 || String(item.fechaPago || '').includes('/11/2026')) entry.nov = 1;
-      if (Number(itemAny.cuotaDiciembre || (item.mes?.toUpperCase().includes('DICIEMBRE') ? 1 : 0) || (item.dic || 0)) > 0 || String(item.fechaPago || '').includes('/12/2026')) entry.dic = 1;
+      let startIndex = 3; // Octubre por defecto
+      if (mesTexto.includes('JULIO') || fecha.includes('/7/')) startIndex = 0;
+      else if (mesTexto.includes('AGOSTO') || fecha.includes('/8/')) startIndex = 1;
+      else if (mesTexto.includes('SEPTIEMBRE') || fecha.includes('/9/')) startIndex = 2;
+      else if (mesTexto.includes('OCTUBRE') || fecha.includes('/10/')) startIndex = 3;
+      else if (mesTexto.includes('NOVIEMBRE') || fecha.includes('/11/')) startIndex = 4;
+      else if (mesTexto.includes('DICIEMBRE') || fecha.includes('/12/')) startIndex = 5;
+
+      const keysMeses = ['jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      for (let i = 0; i < cuotasPagadas; i++) {
+        const target = startIndex + i;
+        if (target < keysMeses.length) {
+          entry[keysMeses[target]] = 1;
+        }
+      }
     });
 
     const clients = Array.from(clientMap.values()).map(client => {
@@ -41,6 +53,7 @@ export const SeguimientoCobranzas: React.FC<SeguimientoCobranzasProps> = ({ aseg
       else if (client.ago === 1) mesInicial = 'AGOSTO';
       else if (client.sep === 1) mesInicial = 'SEPTIEMBRE';
       else if (client.oct === 1) mesInicial = 'OCTUBRE';
+      else if (client.nov === 1) mesInicial = 'NOVIEMBRE';
       return { ...client, mesInicial };
     });
 
@@ -106,13 +119,12 @@ export const SeguimientoCobranzas: React.FC<SeguimientoCobranzasProps> = ({ aseg
         </thead>
         <tbody>
           {dataSeguimiento.map((row) => {
-            const bgMes = row.mes === 'JULIO' ? '#3b82f6' : row.mes === 'AGOSTO' ? '#eab308' : row.mes === 'SEPTIEMBRE' ? '#0f172a' : '#1e293b';
+            const bgMes = row.mes === 'JULIO' ? '#3b82f6' : row.mes === 'AGOSTO' ? '#eab308' : row.mes === 'SEPTIEMBRE' ? '#0f172a' : row.mes === 'OCTUBRE' ? '#1e293b' : '#0284c7';
             const colorTextoMes = row.mes === 'AGOSTO' ? '#000' : '#fff';
             const mesesList = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
             return (
               <React.Fragment key={row.mes}>
-                {/* Fila Emision */}
                 <tr style={{ borderBottom: '1px dashed #cbd5e1' }}>
                   <td rowSpan={4} style={{ backgroundColor: bgMes, color: colorTextoMes, fontWeight: 700, border: '1px solid #cbd5e1', verticalAlign: 'middle', fontSize: '0.85rem' }}>
                     {row.mes.charAt(0) + row.mes.slice(1).toLowerCase()}
@@ -125,7 +137,6 @@ export const SeguimientoCobranzas: React.FC<SeguimientoCobranzasProps> = ({ aseg
                   ))}
                 </tr>
 
-                {/* Fila Recurrencia (Estrictamente columnas posteriores al mes de gestion) */}
                 <tr style={{ borderBottom: '1px dashed #cbd5e1' }}>
                   <td style={{ textAlign: 'left', padding: '0.4rem 0.8rem', fontWeight: 600, border: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>Recurrencia</td>
                   {mesesList.map((m, i) => (
@@ -135,7 +146,6 @@ export const SeguimientoCobranzas: React.FC<SeguimientoCobranzasProps> = ({ aseg
                   ))}
                 </tr>
 
-                {/* Fila Monto $ Emision */}
                 <tr style={{ borderBottom: '1px dashed #cbd5e1' }}>
                   <td style={{ textAlign: 'left', padding: '0.4rem 0.8rem', fontWeight: 600, border: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>Monto $ Emision</td>
                   {mesesList.map((m, i) => (
@@ -145,7 +155,6 @@ export const SeguimientoCobranzas: React.FC<SeguimientoCobranzasProps> = ({ aseg
                   ))}
                 </tr>
 
-                {/* Fila Monto $ Recurrencia (Estrictamente columnas posteriores al mes de gestion) */}
                 <tr style={{ borderBottom: '2px solid #94a3b8' }}>
                   <td style={{ textAlign: 'left', padding: '0.4rem 0.8rem', fontWeight: 600, border: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>Monto $ Recurrencia</td>
                   {mesesList.map((m, i) => {
