@@ -178,7 +178,7 @@ export default function Home() {
             Consolidado de Pagos Cobranzas - Seguros Horizonte
           </h2>
           <p style={{ margin: '0 0 1.5rem', fontSize: '0.7rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Gestión Operativa
+            Gestion Operativa
           </p>
 
           <form onSubmit={(e) => { 
