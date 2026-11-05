@@ -41,6 +41,7 @@ export default function Home() {
     return () => unsubscribe();
   }, [isAuthenticated]);
 
+  // Consolidación estricta por Cédula para agrupar todos los documentos mensuales de Firestore en un solo renglón
   const asegurados = useMemo(() => {
     const map = new Map<string, any>();
     const mesesNombres = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
@@ -169,7 +170,7 @@ export default function Home() {
             <img 
               src="/Biartet Logo circulo.png" 
               alt="Biartet Logo" 
-              style={{ width: '70px', height: '70px', objectFit: 'contain', borderRadius: '50%' }} 
+              style={{ width: '75px', height: '75px', objectFit: 'contain', borderRadius: '50%' }} 
             />
           </div>
 
