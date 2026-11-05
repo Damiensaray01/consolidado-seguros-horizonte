@@ -88,7 +88,7 @@ export default function Home() {
         }
       }
 
-      // Mantener siempre la fecha de pago más antigua como la fecha de emisión/inicio oficial
+      // Mantener siempre la fecha de pago más antigua como la fecha de inicio/emisión oficial
       const parseDate = (d: string) => {
         if (!d || d === '-') return 0;
         const p = d.split('/');
