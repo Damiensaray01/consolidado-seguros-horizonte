@@ -26,6 +26,9 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
   const [selectedMonth, setSelectedMonth] = useState<string>(externalMonthFilter);
   const [selectedStatus, setSelectedStatus] = useState<string>(externalStatusFilter);
   const [selectedBanco, setSelectedBanco] = useState<string>('TODOS');
+  
+  // Estado para controlar el ordenamiento por fecha ('asc' | 'desc' | null)
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>('asc');
 
   useEffect(() => {
     setSelectedStatus(externalStatusFilter);
@@ -140,7 +143,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
   }, [asegurados]);
 
   const filteredAsegurados = useMemo(() => {
-    return consolidatedAsegurados.filter(item => {
+    let result = consolidatedAsegurados.filter(item => {
       const nombre = item.nombreApellido ?? '';
       const cedula = String(item.cedula ?? '');
       const telefono = String(item.telefono ?? '');
@@ -172,7 +175,39 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
 
       return matchSearch && matchBanco && matchStatus && matchMonth;
     });
-  }, [consolidatedAsegurados, searchTerm, selectedBanco, selectedStatus, selectedMonth]);
+
+    // Lógica de ordenamiento por fecha
+    if (sortOrder) {
+      result.sort((a, b) => {
+        const parseDate = (dateStr: string) => {
+          if (!dateStr || dateStr === '-') return 0;
+          const parts = dateStr.split('/');
+          if (parts.length === 3) {
+            // Formato DD/MM/YYYY a timestamp para ordenar correctamente
+            return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
+          }
+          return 0;
+        };
+
+        const timeA = parseDate(a.fechaPago);
+        const timeB = parseDate(b.fechaPago);
+
+        if (sortOrder === 'asc') {
+          return timeA - timeB;
+        } else {
+          return timeB - timeA;
+        }
+      });
+    }
+
+    return result;
+  }, [consolidatedAsegurados, searchTerm, selectedBanco, selectedStatus, selectedMonth, sortOrder]);
+
+  const toggleSortOrder = () => {
+    if (sortOrder === 'asc') setSortOrder('desc');
+    else if (sortOrder === 'desc') setSortOrder('asc');
+    else setSortOrder('asc');
+  };
 
   const exportToExcel = () => {
     const headers = ['Fecha Inicial / Pago', 'Nombre y Apellido', 'Cedula', 'Telefono', 'Cuota ($)', 'Banco', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic', 'Estatus'];
@@ -298,7 +333,13 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
           <thead>
             <tr style={{ backgroundColor: '#0f172a', color: '#ffffff', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.05em' }}>
-              <th style={{ padding: '0.6rem 0.8rem' }}>Fecha Inicial / Pago</th>
+              <th 
+                onClick={toggleSortOrder}
+                style={{ padding: '0.6rem 0.8rem', cursor: 'pointer', userSelect: 'none' }}
+                title="Hacer clic para ordenar por fecha"
+              >
+                Fecha Inicial / Pago {sortOrder === 'asc' ? '▲' : sortOrder === 'desc' ? '▼' : '↕'}
+              </th>
               <th style={{ padding: '0.6rem 0.8rem', width: '24%' }}>Nombre y Apellido</th>
               <th style={{ padding: '0.6rem 0.8rem' }}>Cédula</th>
               <th style={{ padding: '0.6rem 0.8rem' }}>Teléfono</th>
