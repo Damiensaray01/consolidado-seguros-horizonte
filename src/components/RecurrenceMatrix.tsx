@@ -50,12 +50,13 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
     const map = new Map<string, any>();
     const mesesNombres = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
-    // Agrupar estrictamente por Cédula para generar un único renglón por asegurado
+    // Consolidación estricta y única por Cédula de Identidad
     asegurados.forEach(item => {
-      const cedulaKey = String(item.cedula || item.nombreApellido || Math.random()).trim();
-      
-      if (!map.has(cedulaKey)) {
-        map.set(cedulaKey, {
+      const cedulaRaw = String(item.cedula || item.nombreApellido || '').trim();
+      if (!cedulaRaw) return;
+
+      if (!map.has(cedulaRaw)) {
+        map.set(cedulaRaw, {
           ...item,
           jul: 0, ago: 0, sep: 0, oct: 0, nov: 0, dic: 0,
           mesInicial: 'JULIO',
@@ -63,7 +64,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         });
       }
 
-      const entry = map.get(cedulaKey)!;
+      const entry = map.get(cedulaRaw)!;
       const fecha = String(item.fechaPago || '');
       const itemAny = item as any;
       const mesTexto = String(item.mes || '').toUpperCase();
@@ -88,11 +89,11 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         const targetIndex = startIndex + i;
         if (targetIndex >= 6 && targetIndex < 12) {
           const matrixKey = matrixKeys[targetIndex - 6];
-          entry[matrixKey] = 1; // Marcar el mes correspondiente
+          entry[matrixKey] = 1; // Marcar el mes pagado en la matriz unificada
         }
       }
 
-      // Mantener siempre la fecha de pago más antigua como la fecha inicial de emisión
+      // Mantener la fecha de pago más antigua como la fecha de inicio/emisión oficial
       const parseDate = (d: string) => {
         if (!d || d === '-') return 0;
         const p = d.split('/');
@@ -114,13 +115,11 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
       const mesesColsList = ['JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
       const valArr = [client.jul, client.ago, client.sep, client.oct, client.nov, client.dic];
       
-      // Mes inicial real (primer mes con valor 1)
       let mesInicialIndex = valArr.findIndex(v => v === 1);
       if (mesInicialIndex === -1) mesInicialIndex = 3;
 
       let mesInicial = mesesColsList[mesInicialIndex];
 
-      // Último mes pagado
       let ultimoMesPagadoIndex = -1;
       for (let i = valArr.length - 1; i >= 0; i--) {
         if (valArr[i] === 1) {
@@ -129,8 +128,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
         }
       }
 
-      // Mes actual de gestión (Noviembre = índice 4)
-      const currentIndex = 4; 
+      const currentIndex = 4; // Noviembre (índice 4)
       let cuotasDebidas = 0;
 
       if (ultimoMesPagadoIndex !== -1 && ultimoMesPagadoIndex < currentIndex) {
@@ -384,7 +382,7 @@ export const RecurrenceMatrix: React.FC<RecurrenceMatrixProps> = ({
                 const isDebeUna = item.estatusCalculado === 'Debe 1 Cuota';
 
                 return (
-                  <tr key={item.id || index} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
+                  <tr key={item.cedula || index} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
                     <td style={{ padding: '0.55rem 0.8rem', color: item.fechaPago !== '-' ? '#0f172a' : '#dc2626', fontWeight: item.fechaPago !== '-' ? 600 : 700, whiteSpace: 'nowrap' }}>
                       {item.fechaPago || 'S/F'}
                     </td>
